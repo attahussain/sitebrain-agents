@@ -1,49 +1,353 @@
 {
-  "schema_version": 1,
-  "diagram_type": "architecture",
-  "meta": {
-    "title": "SiteBrain System Architecture",
-    "output": "docs/diagrams/architecture.html",
-    "quality_profile": "showcase",
-    "locale": "en"
+ "schema_version": 1,
+ "diagram_type": "architecture",
+ "meta": {
+  "title": "SiteBrain System Architecture",
+  "output": "docs/diagrams/architecture.html",
+  "quality_profile": "showcase",
+  "locale": "en"
+ },
+ "components": [
+  {
+   "id": "client",
+   "type": "external",
+   "label": "Site engineer",
+   "sublabel": "CLI or HTTP client",
+   "pos": [
+    40,
+    220
+   ],
+   "size": [
+    130,
+    64
+   ]
   },
-  "components": [
-    { "id": "client", "type": "external", "label": "Site engineer", "sublabel": "CLI or HTTP client", "pos": [40, 220], "size": [130, 64] },
-    { "id": "api", "type": "backend", "label": "FastAPI service", "sublabel": "/ask, /rfi decision", "pos": [200, 220], "size": [140, 64] },
-    { "id": "cache", "type": "database", "label": "Answer cache", "sublabel": "Redis or in-process", "pos": [200, 60], "size": [140, 64] },
-    { "id": "guard", "type": "security", "label": "guard_input", "sublabel": "PII mask, injection", "pos": [370, 220], "size": [140, 64] },
-    { "id": "planner", "type": "backend", "label": "planner", "sublabel": "route + query", "pos": [540, 220], "size": [140, 64] },
-    { "id": "researcher", "type": "backend", "label": "researcher", "sublabel": "hybrid + page search", "pos": [710, 220], "size": [140, 64] },
-    { "id": "textidx", "type": "database", "label": "Text index", "sublabel": "LanceDB BM25 + vector", "pos": [600, 60], "size": [150, 64] },
-    { "id": "pageidx", "type": "database", "label": "Page index", "sublabel": "ColPali MaxSim", "pos": [770, 60], "size": [140, 64] },
-    { "id": "writer", "type": "backend", "label": "writer", "sublabel": "cited answer or RFI", "pos": [880, 220], "size": [140, 64] },
-    { "id": "critic", "type": "backend", "label": "critic", "sublabel": "grounded? answered?", "pos": [1050, 220], "size": [140, 64] },
-    { "id": "claude", "type": "external", "label": "Claude Opus 5.5", "sublabel": "structured outputs", "pos": [960, 60], "size": [230, 64] },
-    { "id": "review", "type": "security", "label": "human_review", "sublabel": "approve or reject RFI", "pos": [1050, 380], "size": [140, 64] },
-    { "id": "ckpt", "type": "database", "label": "Checkpoints", "sublabel": "SQLite, survives restart", "pos": [1050, 520], "size": [140, 64] }
-  ],
-  "boundaries": [
-    { "kind": "region", "label": "LangGraph agent graph", "wraps": ["guard", "planner", "researcher", "writer", "critic", "review"] }
-  ],
-  "connections": [
-    { "id": "ask", "from": "client", "to": "api", "label": "ask", "variant": "emphasis" },
-    { "id": "cache-lookup", "from": "api", "to": "cache", "label": "cache hit?" },
-    { "id": "api-guard", "from": "api", "to": "guard", "variant": "emphasis" },
-    { "id": "guard-planner", "from": "guard", "to": "planner", "variant": "emphasis" },
-    { "id": "planner-researcher", "from": "planner", "to": "researcher", "variant": "emphasis" },
-    { "id": "search-text", "from": "researcher", "to": "textidx", "label": "search" },
-    { "id": "search-pages", "from": "researcher", "to": "pageidx", "label": "if visual" },
-    { "id": "researcher-writer", "from": "researcher", "to": "writer", "variant": "emphasis" },
-    { "id": "writer-claude", "from": "writer", "to": "claude", "label": "text + images" },
-    { "id": "writer-critic", "from": "writer", "to": "critic", "variant": "emphasis" },
-    { "id": "critic-claude", "from": "critic", "to": "claude", "label": "verify" },
-    { "id": "retry", "from": "critic", "to": "researcher", "label": "retry: new query", "variant": "dashed" },
-    { "id": "rfi-gate", "from": "critic", "to": "review", "label": "RFI only", "variant": "security" },
-    { "id": "persist", "from": "review", "to": "ckpt", "label": "pause state" }
-  ],
-  "cards": [
-    { "dot": "emerald", "title": "Agents", "items": ["Every agent returns a Pydantic schema via Claude", "Critic retries retrieval at most twice", "Answers are PII-masked again before return"] },
-    { "dot": "cyan", "title": "Retrieval", "items": ["BM25 and bge-small vectors fused by RRF", "Lexical-first when the query has an ID", "ColSmol on CPU, ColQwen2.5 on 12 GB+ GPUs"] },
-    { "dot": "rose", "title": "Guardrails", "items": ["Direct injection blocked before any agent", "Injected text stripped from retrieved chunks", "Formal RFIs need human approval"] }
-  ]
+  {
+   "id": "api",
+   "type": "backend",
+   "label": "FastAPI service",
+   "sublabel": "/ask, /rfi decision",
+   "pos": [
+    200,
+    220
+   ],
+   "size": [
+    140,
+    64
+   ]
+  },
+  {
+   "id": "cache",
+   "type": "database",
+   "label": "Answer cache",
+   "sublabel": "Redis or in-process",
+   "pos": [
+    200,
+    60
+   ],
+   "size": [
+    140,
+    64
+   ]
+  },
+  {
+   "id": "guard",
+   "type": "security",
+   "label": "guard_input",
+   "sublabel": "PII mask, injection",
+   "pos": [
+    370,
+    220
+   ],
+   "size": [
+    140,
+    64
+   ]
+  },
+  {
+   "id": "planner",
+   "type": "backend",
+   "label": "planner",
+   "sublabel": "route + query",
+   "pos": [
+    540,
+    220
+   ],
+   "size": [
+    140,
+    64
+   ]
+  },
+  {
+   "id": "researcher",
+   "type": "backend",
+   "label": "researcher",
+   "sublabel": "hybrid + page search",
+   "pos": [
+    710,
+    220
+   ],
+   "size": [
+    140,
+    64
+   ]
+  },
+  {
+   "id": "textidx",
+   "type": "database",
+   "label": "Text index",
+   "sublabel": "LanceDB BM25 + vector",
+   "pos": [
+    600,
+    60
+   ],
+   "size": [
+    150,
+    64
+   ]
+  },
+  {
+   "id": "pageidx",
+   "type": "database",
+   "label": "Page index",
+   "sublabel": "ColPali MaxSim",
+   "pos": [
+    770,
+    60
+   ],
+   "size": [
+    140,
+    64
+   ]
+  },
+  {
+   "id": "writer",
+   "type": "backend",
+   "label": "writer",
+   "sublabel": "cited answer or RFI",
+   "pos": [
+    880,
+    220
+   ],
+   "size": [
+    140,
+    64
+   ]
+  },
+  {
+   "id": "critic",
+   "type": "backend",
+   "label": "critic",
+   "sublabel": "grounded? answered?",
+   "pos": [
+    1050,
+    220
+   ],
+   "size": [
+    140,
+    64
+   ]
+  },
+  {
+   "id": "claude",
+   "type": "external",
+   "label": "Claude Opus 5.5",
+   "sublabel": "structured outputs",
+   "pos": [
+    960,
+    60
+   ],
+   "size": [
+    230,
+    64
+   ]
+  },
+  {
+   "id": "review",
+   "type": "security",
+   "label": "human_review",
+   "sublabel": "approve or reject RFI",
+   "pos": [
+    1050,
+    380
+   ],
+   "size": [
+    140,
+    64
+   ]
+  },
+  {
+   "id": "ckpt",
+   "type": "database",
+   "label": "Checkpoints",
+   "sublabel": "SQLite, survives restart",
+   "pos": [
+    1050,
+    520
+   ],
+   "size": [
+    140,
+    64
+   ]
+  },
+  {
+   "id": "okf",
+   "type": "database",
+   "label": "OKF bundle",
+   "sublabel": "curated, trust + links",
+   "pos": [
+    390,
+    60
+   ],
+   "size": [
+    160,
+    64
+   ]
+  }
+ ],
+ "boundaries": [
+  {
+   "kind": "region",
+   "label": "LangGraph agent graph",
+   "wraps": [
+    "guard",
+    "planner",
+    "researcher",
+    "writer",
+    "critic",
+    "review"
+   ]
+  }
+ ],
+ "connections": [
+  {
+   "id": "ask",
+   "from": "client",
+   "to": "api",
+   "label": "ask",
+   "variant": "emphasis"
+  },
+  {
+   "id": "cache-lookup",
+   "from": "api",
+   "to": "cache",
+   "label": "cache hit?"
+  },
+  {
+   "id": "api-guard",
+   "from": "api",
+   "to": "guard",
+   "variant": "emphasis"
+  },
+  {
+   "id": "guard-planner",
+   "from": "guard",
+   "to": "planner",
+   "variant": "emphasis"
+  },
+  {
+   "id": "planner-researcher",
+   "from": "planner",
+   "to": "researcher",
+   "variant": "emphasis"
+  },
+  {
+   "id": "search-text",
+   "from": "researcher",
+   "to": "textidx",
+   "label": "search"
+  },
+  {
+   "id": "search-pages",
+   "from": "researcher",
+   "to": "pageidx",
+   "label": "if visual"
+  },
+  {
+   "id": "researcher-writer",
+   "from": "researcher",
+   "to": "writer",
+   "variant": "emphasis"
+  },
+  {
+   "id": "writer-claude",
+   "from": "writer",
+   "to": "claude",
+   "label": "text + images"
+  },
+  {
+   "id": "writer-critic",
+   "from": "writer",
+   "to": "critic",
+   "variant": "emphasis"
+  },
+  {
+   "id": "critic-claude",
+   "from": "critic",
+   "to": "claude",
+   "label": "verify"
+  },
+  {
+   "id": "retry",
+   "from": "critic",
+   "to": "researcher",
+   "label": "retry: new query",
+   "variant": "dashed"
+  },
+  {
+   "id": "rfi-gate",
+   "from": "critic",
+   "to": "review",
+   "label": "RFI only",
+   "variant": "security"
+  },
+  {
+   "id": "persist",
+   "from": "review",
+   "to": "ckpt",
+   "label": "pause state"
+  },
+  {
+   "id": "okf-index",
+   "from": "okf",
+   "to": "textidx",
+   "label": "curated rows",
+   "variant": "dashed"
+  },
+  {
+   "id": "follow-links",
+   "from": "researcher",
+   "to": "okf",
+   "label": "follow links"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "emerald",
+   "title": "Agents",
+   "items": [
+    "Every agent returns a Pydantic schema via Claude",
+    "Critic retries retrieval at most twice",
+    "Answers are PII-masked again before return"
+   ]
+  },
+  {
+   "dot": "cyan",
+   "title": "Retrieval",
+   "items": [
+    "BM25 + bge-small vectors fused by RRF",
+    "OKF decisions override outdated spec text",
+    "ColSmol on CPU, ColQwen2.5 on 12 GB+ GPUs"
+   ]
+  },
+  {
+   "dot": "rose",
+   "title": "Guardrails",
+   "items": [
+    "Direct injection blocked before any agent",
+    "Injected text stripped from retrieved chunks",
+    "Formal RFIs need human approval"
+   ]
+  }
+ ]
 }

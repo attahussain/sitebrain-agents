@@ -8,7 +8,9 @@
    request ends the run before any model is called, so a hostile prompt costs nothing and reaches nothing.
 2. **planner** returns a `Plan` (route + search query). Routing is a model decision, but the graph edges
    are fixed in code, so the planner can choose a path, not invent one.
-3. **researcher** runs hybrid retrieval (BM25 + vector) over LanceDB and strips injected sentences from each chunk.
+3. **researcher** runs hybrid retrieval (BM25 + vector) over LanceDB, covering raw document chunks and
+   curated OKF concepts, follows links from retrieved concepts (for example to the decision that amends a
+   requirement), and strips injected sentences from each chunk.
 4. **writer** produces an `Answer` or an `RFIDraft` from the retrieved chunks only, citing `chunk_id`s.
 5. **critic** returns a `Critique`. If the draft is not grounded and the critic suggests a better query,
    the graph loops back to the researcher, up to `SITEBRAIN_MAX_ATTEMPTS` research passes.

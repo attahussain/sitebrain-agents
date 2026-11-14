@@ -52,7 +52,7 @@ retarded mixes. Details, including the experiments that did not work, are in [do
 | Agent | Job |
 |---|---|
 | **planner** (supervisor) | Classifies the request (`answer` / `summarize` / `draft_rfi`) and writes a focused search query |
-| **researcher** | Hybrid retrieval over LanceDB; removes injected instructions hidden in retrieved documents |
+| **researcher** | Hybrid retrieval over LanceDB (raw documents and curated OKF concepts, following links between concepts); removes injected instructions hidden in retrieved documents |
 | **writer** | Answers **only** from retrieved sources, citing a `chunk_id` after every factual sentence |
 | **critic** | Checks every claim against the sources and whether the question was actually answered; otherwise sends the researcher back with a reworded query (bounded retries) |
 | **human_review** | RFIs pause the graph (`interrupt`) until a person approves or rejects; state is checkpointed to SQLite and survives restarts |
