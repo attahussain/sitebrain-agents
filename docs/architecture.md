@@ -6,7 +6,7 @@
    request ends the run before any model is called, so a hostile prompt costs nothing and reaches nothing.
 2. **planner** returns a `Plan` (route + search query). Routing is a model decision, but the graph edges
    are fixed in code, so the planner can choose a path, not invent one.
-3. **researcher** runs a cosine search over LanceDB and strips injected sentences from each chunk.
+3. **researcher** runs hybrid retrieval (BM25 + vector) over LanceDB and strips injected sentences from each chunk.
 4. **writer** produces an `Answer` or an `RFIDraft` from the retrieved chunks only, citing `chunk_id`s.
 5. **critic** returns a `Critique`. If the draft is not grounded and the critic suggests a better query,
    the graph loops back to the researcher, up to `SITEBRAIN_MAX_ATTEMPTS` research passes.
@@ -48,6 +48,28 @@ personal data that lives in the documents themselves (the site engineer's contac
 **Structured outputs everywhere.** Each agent returns a Pydantic model enforced by the API's
 structured-output support, so the graph never parses free text to find a route or a verdict.
 
+**Hybrid retrieval, lexical-first for identifiers.** Vector search finds "how long must concrete
+cure" without the word "cure" in the text; BM25 finds "INS-1007" exactly. Both run on every query.
+On a benchmark of 60 near-identical daily reports, the obvious design, equal-weight reciprocal rank
+fusion, was worse than BM25 alone (41% vs 100% top-1): vector search was close to random there
+(27%), and RRF gave its noise an equal vote. Weighting the vector list down to 0.25 only reached 56%,
+because RRF scores at the top are nearly flat: rank 1 and rank 2 differ by 1/61 - 1/62, about 0.0003,
+so even a small vector vote reorders them. Tuning the weight further would have been fitting the
+benchmark. The shipped rule expresses the intent directly: if the query contains an identifier
+(letters and digits joined by hyphens, or a 4+ digit number) and BM25 returns matches, use BM25 order
+and back-fill with vector hits; otherwise fuse with plain RRF.
+
+**Persistent checkpoints for the API.** The CLI keeps graph state in memory. The API uses a SQLite
+checkpointer, so an RFI that is waiting for a human survives a process restart; a test starts an RFI,
+discards the app, builds a new one on the same file and approves it.
+
+**Answer cache keyed on settings, not just the question.** The key includes provider, model, effort,
+search mode and top-k, so changing any of them cannot serve a stale answer. RFIs and blocked requests
+are never cached. Redis is used when configured so replicas share hits.
+
+**Per-node timing.** Each node is wrapped to record its wall-clock time; the API returns the list with
+every answer. The human-review node is excluded because its duration is a person's response time.
+
 **Local embeddings.** `BAAI/bge-small-en-v1.5` via fastembed runs on CPU, costs nothing per query and keeps
 document text inside the machine during indexing. LanceDB stores vectors and metadata in one embedded
 table, with no server to run.
@@ -58,8 +80,11 @@ the Claude evaluation run is for.
 
 ## Known limitations
 
-- `InMemorySaver` loses paused RFIs when the process exits. A deployment would use a persistent
-  checkpointer (SQLite or Postgres) so approvals can happen hours later.
-- Chunking is paragraph-based. Long tables and drawings (the original use case) need layout-aware parsing.
+- SQLite checkpoints suit one API instance. Several replicas would need a shared checkpointer (Postgres).
+- The identifier rule is a regular expression. Identifiers in other formats (for example "Grid line B")
+  fall back to plain fusion.
+- The scale benchmark is synthetic. It reproduces the template repetition of real daily reports but not
+  their messiness (typos, scanned PDFs, tables).
+- Chunking is section-based. Long tables and drawings (the original use case) need layout-aware parsing.
 - The evaluation set is 14 cases over 6 short documents: enough to catch regressions, not to claim accuracy.
 - The critic is the same model family as the writer, so it can share the writer's blind spots.

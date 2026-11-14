@@ -24,14 +24,42 @@ answer should contain.
 
 ## Results
 
-Claude Opus 5.5 (`effort=medium`), `bge-small` embeddings, 14 cases:
+Claude Opus 5.5 (`effort=medium`), `bge-small` embeddings:
 
-| Run | retrieval_hit | keyword_recall | grounded | citation_validity | injection_blocked | indirect_quarantined | avg latency | tokens in / out |
-|---|---|---|---|---|---|---|---|---|
-| Before fixes | 0.91 | 0.92 | 1.00 | 1.00 | 1.00 | 1.00 | 8.5 s | 48.8K / 6.6K |
-| **Current** | **1.00** | **1.00** | **1.00** | **1.00** | **1.00** | **1.00** | **5.2 s** | **36.7K / 4.9K** |
+| Run | cases | retrieval_hit | keyword_recall | grounded | citation_validity | injection_blocked | indirect_quarantined | avg latency | tokens in / out |
+|---|---|---|---|---|---|---|---|---|---|
+| v0.1, first run | 14 | 0.91 | 0.92 | 1.00 | 1.00 | 1.00 | 1.00 | 8.5 s | 48.8K / 6.6K |
+| v0.1, after fixes | 14 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 5.2 s | 36.7K / 4.9K |
+| **v0.2, hybrid retrieval** | **20** | **1.00** | **1.00** | **1.00** | **1.00** | **1.00** | **1.00** | **4.8 s** | **56.3K / 6.9K** |
 
-A full run makes 36 model calls and costs roughly USD 0.25 at list prices.
+v0.2 adds six questions built around exact identifiers (column IDs, crane IDs, the specification section
+number, counts). A full v0.2 run makes 56 model calls and costs roughly USD 0.36 at list prices.
+
+## Retrieval benchmark
+
+`evals/compare_retrieval.py` measures retrieval alone, with no LLM calls.
+
+**Demo corpus** (6 documents, 17 questions with expected documents): vector, BM25 and hybrid all reach
+hit@1 0.94, hit@4 1.00. With so few documents the right one ranks near the top regardless of method,
+so this corpus cannot separate them.
+
+**Scale corpus** (`evals/make_scale_corpus.py`): 60 synthetic daily reports from one template, each
+holding one unique fact, and 81 questions whose answer lives in exactly one report. It imitates the
+repetition of a real project's report archive; it is generated deterministically and not committed.
+
+| Retrieval | hit@1 | hit@4 | MRR |
+|---|---|---|---|
+| vector | 0.27 | 0.31 | 0.29 |
+| BM25 keyword | 1.00 | 1.00 | 1.00 |
+| hybrid, equal-weight RRF | 0.41 | 0.89 | 0.58 |
+| hybrid, RRF with vector weight 0.25 | 0.56 | 0.98 | 0.72 |
+| **hybrid, lexical-first for identifiers (shipped)** | **1.00** | **1.00** | **1.00** |
+
+The first version of the generator reused each crane-and-fault pair every 21 days, so "on which day was
+TC-2 stopped because of a hydraulic hose leak?" had three correct answers while the dataset accepted
+one. That showed up as BM25 placing the expected report at rank 3 on every such question; the
+generator now makes each pair unique. The design reasoning for the shipped rule is in
+[architecture.md](architecture.md).
 
 Offline run (`SITEBRAIN_PROVIDER=mock`): retrieval_hit 1.00, keyword_recall 0.92, all guardrail metrics 1.00.
 The mock is extractive and misses the safety summary (q10); it is there to validate retrieval, routing and
