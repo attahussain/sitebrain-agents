@@ -1,0 +1,20 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY in your shell or .env}
+      SITEBRAIN_PROVIDER: ${SITEBRAIN_PROVIDER:-claude}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - sitebrain-state:/app/data/state
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+
+volumes:
+  sitebrain-state:

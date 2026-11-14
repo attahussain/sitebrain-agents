@@ -1,0 +1,12 @@
+.venv/
+.git/
+**/__pycache__/
+*.egg-info/
+.pytest_cache/
+data/lancedb/
+data/scale_docs/
+data/*.sqlite
+evals/
+tests/
+docs/
+.env

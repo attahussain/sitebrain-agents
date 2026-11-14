@@ -22,3 +22,19 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev]"
       - run: pytest -q
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t sitebrain:ci .
+      - name: Start container and check /health
+        run: |
+          docker run -d --name sb -p 8000:8000 -e SITEBRAIN_PROVIDER=mock sitebrain:ci
+          for i in $(seq 1 60); do
+            if curl -fs localhost:8000/health; then exit 0; fi
+            sleep 2
+          done
+          docker logs sb
+          exit 1
