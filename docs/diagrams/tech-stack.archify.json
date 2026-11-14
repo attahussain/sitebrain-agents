@@ -1,0 +1,22 @@
+{"schema_version":1,"diagram_type":"tree","meta":{"title":"SiteBrain Tech Stack","output":"docs/diagrams/tech-stack.html","quality_profile":"showcase","locale":"en"},
+"layout":{"direction":"down"},
+"nodes":[
+{"id":"root","label":"SiteBrain","sublabel":"Python 3.11 / 3.12"},
+{"id":"llm","label":"LLM + agents","parent":"root"},
+{"id":"l1","label":"Claude Opus 5.5","parent":"llm","sublabel":"Anthropic SDK"},
+{"id":"l2","label":"LangGraph","parent":"llm","sublabel":"graph, interrupt"},
+{"id":"l3","label":"Pydantic","parent":"llm","sublabel":"structured outputs"},
+{"id":"ret","label":"Retrieval","parent":"root"},
+{"id":"t1","label":"LanceDB","parent":"ret","sublabel":"FTS + vectors"},
+{"id":"t2","label":"fastembed","parent":"ret","sublabel":"bge-small, CLIP"},
+{"id":"t3","label":"colpali-engine","parent":"ret","sublabel":"ColSmol, ColQwen2.5"},
+{"id":"t4","label":"PyTorch","parent":"ret","sublabel":"CPU or CUDA"},
+{"id":"svc","label":"Service","parent":"root"},
+{"id":"v1","label":"FastAPI","parent":"svc","sublabel":"Uvicorn"},
+{"id":"v2","label":"SQLite","parent":"svc","sublabel":"checkpoints"},
+{"id":"v3","label":"Redis","parent":"svc","sublabel":"answer cache"},
+{"id":"ops","label":"Delivery","parent":"root"},
+{"id":"o1","label":"Docker","parent":"ops","sublabel":"compose stack"},
+{"id":"o2","label":"GitHub Actions","parent":"ops","sublabel":"tests + image"},
+{"id":"o3","label":"pytest","parent":"ops","sublabel":"32 offline tests"}
+]}

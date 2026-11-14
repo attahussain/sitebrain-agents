@@ -35,21 +35,12 @@ Details, including the experiments that did not work, are in [docs/evaluation.md
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    U([User / API]) --> GI[guard_input<br/>PII mask + injection check]
-    GI -- blocked --> X([END: refused])
-    GI --> P[planner<br/>route + search query]
-    P --> R[researcher<br/>hybrid BM25 + vector search<br/>strips injected text]
-    R --> W[writer<br/>cited answer / summary / RFI]
-    W --> C[critic<br/>grounded? answered?]
-    C -- retry with new query --> R
-    C -- RFI --> H{{human_review<br/>interrupt, SQLite checkpoint}}
-    C -- answer --> F[finalize]
-    H --> F
-    F --> GO[guard_output<br/>PII mask]
-    GO --> E([END])
-```
+![SiteBrain system architecture](docs/diagrams/architecture.png)
+
+<sub>Interactive versions (zoom, route tracing, light/dark): download and open
+[architecture](docs/diagrams/architecture.html), [features](docs/diagrams/features.html),
+[tech stack](docs/diagrams/tech-stack.html). Diagrams are generated with
+[Archify](https://github.com/tt-a1i/archify) from the JSON specs in `docs/diagrams/`.</sub>
 
 | Agent | Job |
 |---|---|
@@ -81,6 +72,14 @@ flowchart LR
 - **PII masking**: emails, UAE phone numbers, Emirates ID and IBANs are masked on input and output.
 - **Structured outputs**: every agent returns a Pydantic-validated schema.
 - **Refusal handling**: `stop_reason == "refusal"` is checked, with server-side fallback enabled.
+
+## Features
+
+![SiteBrain features](docs/diagrams/features.png)
+
+## Tech stack
+
+![SiteBrain tech stack](docs/diagrams/tech-stack.png)
 
 ## Quick start
 
@@ -202,7 +201,7 @@ sitebrain/
   cli.py         # ingest / ask (interactive RFI approval)
 evals/           # datasets, end-to-end harness, retrieval benchmark
 tests/           # pytest suite
-docs/            # architecture and evaluation write-ups
+docs/            # architecture and evaluation write-ups, diagrams/ (PNG, interactive HTML, Archify specs)
 data/docs/       # fictional project documents
 data/pages/      # fictional drawings, schedules, checklists, site plan, progress chart (PNG)
 Dockerfile, compose.yml, .github/   # container, local stack, CI

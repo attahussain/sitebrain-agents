@@ -1,5 +1,7 @@
 # Architecture and design decisions
 
+![SiteBrain system architecture](diagrams/architecture.png)
+
 ## Request lifecycle
 
 1. **guard_input** masks PII in the question, then checks it for prompt-injection patterns. A flagged
