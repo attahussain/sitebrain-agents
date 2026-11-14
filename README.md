@@ -39,7 +39,7 @@ Details, including the experiments that did not work, are in [docs/evaluation.md
 
 <sub>Interactive versions (zoom, route tracing, light/dark): download and open
 [architecture](docs/diagrams/architecture.html), [features](docs/diagrams/features.html),
-[tech stack](docs/diagrams/tech-stack.html). Diagrams are generated with
+[tech stack](docs/diagrams/tech-stack.html), [data pipeline](docs/diagrams/data-pipeline.html). Diagrams are generated with
 [Archify](https://github.com/tt-a1i/archify) from the JSON specs in `docs/diagrams/`.</sub>
 
 | Agent | Job |
@@ -72,6 +72,10 @@ Details, including the experiments that did not work, are in [docs/evaluation.md
 - **PII masking**: emails, UAE phone numbers, Emirates ID and IBANs are masked on input and output.
 - **Structured outputs**: every agent returns a Pydantic-validated schema.
 - **Refusal handling**: `stop_reason == "refusal"` is checked, with server-side fallback enabled.
+
+## Data pipeline
+
+![SiteBrain data pipeline](docs/diagrams/data-pipeline.png)
 
 ## Features
 
