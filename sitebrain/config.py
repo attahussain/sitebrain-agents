@@ -24,6 +24,14 @@ class Settings:
     top_k: int = field(default_factory=lambda: int(_env("SITEBRAIN_TOP_K", "4")))
     # "hybrid" (BM25 + vector, fused by RRF), "vector" or "keyword".
     search_mode: str = field(default_factory=lambda: _env("SITEBRAIN_SEARCH_MODE", "hybrid"))
+    # Curated knowledge: an OKF v0.2 bundle searched alongside the raw documents.
+    okf_dir: Path = field(default_factory=lambda: Path(_env("SITEBRAIN_OKF", str(ROOT / "data" / "okf"))))
+    # Which sources are indexed: "both" (default), "docs" (raw documents only) or "okf" (bundle only).
+    sources: str = field(default_factory=lambda: _env("SITEBRAIN_SOURCES", "both"))
+    # How many linked concepts the researcher may add by following OKF links (0 disables).
+    okf_link_budget: int = field(default_factory=lambda: int(_env("SITEBRAIN_OKF_LINKS", "2")))
+    # Write approved RFIs back into the bundle as draft "Open RFI" concepts.
+    okf_writeback: bool = field(default_factory=lambda: _env("SITEBRAIN_OKF_WRITEBACK", "0") in ("1", "true", "on"))
     max_research_attempts: int = field(default_factory=lambda: int(_env("SITEBRAIN_MAX_ATTEMPTS", "2")))
     # Visual page retrieval (ColPali family). Off by default: it needs the [visual] extra and a model download.
     visual: bool = field(default_factory=lambda: _env("SITEBRAIN_VISUAL", "0") in ("1", "true", "on"))

@@ -9,6 +9,7 @@ import lancedb
 from lancedb.index import FTS
 
 from sitebrain.config import Settings
+from sitebrain.okf import load_bundle, searchable, to_row
 
 TABLE = "site_docs"
 _HASH_DIM = 256
@@ -82,12 +83,24 @@ class DocStore:
         self.embedder = Embedder(settings.embedder)
         settings.db_dir.mkdir(parents=True, exist_ok=True)
         self.db = lancedb.connect(str(settings.db_dir))
+        self._concepts = None
+
+    @property
+    def concepts(self):
+        if self._concepts is None:
+            self._concepts = load_bundle(self.settings.okf_dir)
+        return self._concepts
 
     def ingest(self, docs_dir: Path | None = None) -> int:
         docs_dir = docs_dir or self.settings.docs_dir
         rows: list[dict] = []
-        for path in sorted(docs_dir.glob("*.md")):
-            rows.extend(chunk_markdown(path.stem, path.read_text(encoding="utf-8")))
+        if self.settings.sources in ("docs", "both"):
+            for path in sorted(docs_dir.glob("*.md")):
+                for row in chunk_markdown(path.stem, path.read_text(encoding="utf-8")):
+                    rows.append({**row, "kind": "doc", "trust": "", "status": ""})
+        if self.settings.sources in ("okf", "both"):
+            self._concepts = load_bundle(self.settings.okf_dir)
+            rows.extend(to_row(c) for c in searchable(self._concepts))
         vectors = self.embedder.embed([r["text"] for r in rows])
         for row, vec in zip(rows, vectors):
             row["vector"] = vec
@@ -101,16 +114,42 @@ class DocStore:
         k = k or self.settings.top_k
         mode = mode or self.settings.search_mode
         if mode == "vector":
-            return self._vector(query, k)
-        if mode == "keyword":
-            return self._keyword(query, k)
-        if mode == "hybrid":
+            hits = self._vector(query, k)
+        elif mode == "keyword":
+            hits = self._keyword(query, k)
+        elif mode == "hybrid":
             pool = max(k * 3, 10)  # fuse deeper candidate lists than we return
             vector_hits, keyword_hits = self._vector(query, pool), self._keyword(query, pool)
             if has_identifier(query) and keyword_hits:
-                return lexical_first(keyword_hits, vector_hits, k)
-            return reciprocal_rank_fusion([vector_hits, keyword_hits], k)
-        raise ValueError(f"Unknown search mode: {mode}")
+                hits = lexical_first(keyword_hits, vector_hits, k)
+            else:
+                hits = reciprocal_rank_fusion([vector_hits, keyword_hits], k)
+        else:
+            raise ValueError(f"Unknown search mode: {mode}")
+        return self.follow_links(hits)
+
+    def follow_links(self, hits: list[dict]) -> list[dict]:
+        """Add concepts linked from retrieved OKF concepts, up to the link budget.
+
+        A requirement links to the decision that amends it, and a spec links to its lesson learned;
+        those neighbours often hold the exception or context a similarity search does not rank.
+        """
+        budget = self.settings.okf_link_budget
+        if self.settings.sources == "docs" or budget <= 0:
+            return hits
+        present = {h["chunk_id"] for h in hits}
+        added: list[dict] = []
+        for hit in hits:
+            concept = self.concepts.get(hit["doc_id"][4:]) if hit.get("kind") == "okf" else None
+            for target in concept.links if concept else []:
+                linked = self.concepts.get(target)
+                if linked is None or linked.status == "deprecated" or f"okf:{target}" in present:
+                    continue
+                present.add(f"okf:{target}")
+                added.append({**to_row(linked), "score": 0.0, "sources": ["link"]})
+                if len(added) >= budget:
+                    return hits + added
+        return hits + added
 
     def _vector(self, query: str, k: int) -> list[dict]:
         table = self.db.open_table(TABLE)
@@ -131,6 +170,8 @@ def _row(hit: dict, score: float, source: str) -> dict:
         "doc_id": hit["doc_id"],
         "title": hit["title"],
         "text": hit["text"],
+        "kind": hit.get("kind", "doc"),
+        "trust": hit.get("trust", ""),
         "score": round(score, 4),
         "sources": [source],
     }

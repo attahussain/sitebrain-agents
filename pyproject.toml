@@ -1,6 +1,6 @@
 [project]
 name = "sitebrain-agents"
-version = "0.3.0"
+version = "0.4.0"
 description = "Multi-agent RAG assistant for construction site documents (LangGraph + Claude + LanceDB)"
 requires-python = ">=3.11"
 dependencies = [
@@ -13,6 +13,7 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "langgraph-checkpoint-sqlite>=3.0",
     "redis>=5.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]

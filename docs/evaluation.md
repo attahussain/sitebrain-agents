@@ -126,6 +126,35 @@ chart. `evals/visual_queries.jsonl` has 12 questions whose answers exist only in
 The writer and critic receive the retrieved page images, so the answer is read from the drawing,
 schedule or form itself (for example "32 mm" from the schedule table, "QA-01" from a checklist).
 
+## Curated knowledge (v0.4, OKF)
+
+`evals/okf_dataset.jsonl` has 8 questions written against the OKF bundle in `data/okf/`: an approved
+decision that changes a specification limit (k01, k02), a procedure that exists only in the bundle (k03),
+a value whose superseded revision is in the bundle as `deprecated` (k04, which also fails if the
+superseded 35 C appears in the answer), an unverified machine-drafted lesson that the answer must flag
+as unverified (k05), a fact reached through a link (k06), a provenance question (k07), and one question
+answerable from the raw specification alone (k08). The questions were written for this bundle, so the
+raw-only numbers show what the bundle adds, not how a general system would score.
+
+| Sources | retrieval hit | expected facts | grounded | valid citations | no superseded values | avg latency | cost |
+|---|---|---|---|---|---|---|---|
+| Raw documents only | 0.25 | 0.56 | 1.00 | 1.00 | 1.00 | 12.5 s | $0.27 |
+| Documents + OKF bundle | **1.00** | **1.00** | **1.00** | **1.00** | **1.00** | 10.2 s | $0.23 |
+
+- **Grounded is not correct.** Raw-only answers were all judged grounded: for k01 the system correctly
+  quoted the 90-minute rule and rejected a load that RFI-021 allows. The critic can only check answers
+  against what was retrieved; knowledge the documents never captured is invisible to it.
+- **First run, before the provenance fix:** documents + OKF scored facts 0.88, grounded 0.75. The model
+  could not answer who confirmed RFI-021 because the row carried only a trust label, and the critic
+  rejected answers that relied on it. Adding a provenance line to each concept and telling the critic
+  it is reliable metadata gave the row above. One of the two critic rejections in that run was
+  unrelated to OKF (the writer added an unsupported cube-count example to k08); it did not recur.
+- **No regression:** the original 20-case set with the bundle indexed scored 1.00 on every metric
+  (7.7 s, $0.46). The offline mock run is unchanged with and without the bundle (same three
+  extractive misses).
+- Retrieval only (mock model, local embeddings): raw documents 0.25, bundle only 0.88 (it cannot answer
+  the cube-sampling question, which lives only in the specification), both 1.00.
+
 ## Measurement notes
 
 - **Proxy.** This machine routes Anthropic traffic through a local proxy that compresses requests and

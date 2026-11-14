@@ -84,7 +84,32 @@ accurate but nearly filled an 8 GB card with its weights alone, which made index
 ColSmol on the same GPU. `auto` uses ColQwen2.5 only with at least 12 GB of VRAM. Any model can be forced
 with `SITEBRAIN_VISUAL_MODEL`.
 
-**Local embeddings.** `BAAI/bge-small-en-v1.5` via fastembed runs on CPU, costs nothing per query and keeps
+**Curated knowledge in OKF, next to the raw documents, not instead of them.** Raw documents record what
+was written; they do not record what was later decided. Section 03300 still says loads over 90 minutes
+are rejected after RFI-021 allowed 120 minutes for retarded mixes, and a pipeline that only reads raw
+text answers that question confidently and wrongly. The Open Knowledge Format gives decided facts a
+home with the metadata needed to rank them: `verified` (who confirmed it), `status` (draft, stable,
+deprecated), `stale_after`, `sources`, and links. Choices made while adopting it:
+
+- *One row per concept.* Concepts are short and written to stand alone, so they are not chunked; the
+  row text ends with a provenance line (trust tier, verifier and date, origin) that the writer can cite
+  and the critic is told it may rely on. The first Claude run showed why: given only a trust label, the
+  model could not say who confirmed RFI-021, and the critic objected to answers that leaned on the label.
+- *Trust decides conflicts in the prompt, not in the ranking.* Boosting curated rows in the fusion
+  would hide the raw text that a reader may still need ("what did the original specification say?").
+  Both are retrieved; the writer is told that a human-reviewed curated source supersedes a raw
+  document it contradicts and to say what changed.
+- *Links are followed with a budget.* A requirement links to the decision that amends it and a spec
+  links to its lesson learned. The researcher adds up to `SITEBRAIN_OKF_LINKS` (default 2) linked,
+  non-deprecated concepts after search, so the exception arrives with the rule even when similarity
+  search ranks it lower.
+- *Deprecated concepts stay in the bundle and out of the index.* They keep links and history intact
+  but can never be quoted as current.
+- *Write-back is conservative.* An approved RFI is written as a `draft` "Open RFI" concept with an
+  `approved_for_release` field and no `verified` entry: a reviewer approved sending the question, not
+  any answer, so the concept enters at the lowest trust tier.
+
+ `BAAI/bge-small-en-v1.5` via fastembed runs on CPU, costs nothing per query and keeps
 document text inside the machine during indexing. LanceDB stores vectors and metadata in one embedded
 table, with no server to run.
 
@@ -93,6 +118,11 @@ retrieval/guardrail metrics run without an API key. It says nothing about answer
 the Claude evaluation run is for.
 
 ## Known limitations
+
+- The OKF bundle is hand-written demo data and small (6 concepts). A real bundle would be produced by an
+  agent from correspondence and reviewed by people; keeping it current is the actual cost of the approach.
+- Trust is enforced by prompt instructions, not by code. A model could still prefer a raw document over
+  a curated decision; the evaluation measures this but cannot rule it out.
 
 - SQLite checkpoints suit one API instance. Several replicas would need a shared checkpointer (Postgres).
 - The identifier rule is a regular expression. Identifiers in other formats (for example "Grid line B")

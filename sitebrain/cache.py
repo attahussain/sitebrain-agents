@@ -15,7 +15,7 @@ from sitebrain.config import Settings
 
 def cache_key(question: str, settings: Settings) -> str:
     normalised = re.sub(r"\s+", " ", question.strip().lower())
-    parts = [normalised, settings.provider, settings.model, settings.effort, settings.search_mode, str(settings.top_k)]
+    parts = [normalised, settings.provider, settings.model, settings.effort, settings.search_mode, str(settings.top_k), settings.sources]
     return "sitebrain:answer:" + hashlib.sha256("|".join(parts).encode()).hexdigest()
 
 

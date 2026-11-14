@@ -1,26 +1,201 @@
-{"schema_version":1,"diagram_type":"dataflow","meta":{"title":"SiteBrain Data Pipeline","output":"docs/diagrams/data-pipeline.html","quality_profile":"showcase","locale":"en"},
-"stages":[{"label":"Sources"},{"label":"Prepare"},{"label":"Embed"},{"label":"Store"},{"label":"Query time"}],
-"nodes":[
-{"id":"docs","type":"database","label":"Markdown docs","sublabel":"reports, specs, HSE","stage":0,"row":0},
-{"id":"chunk","type":"backend","label":"Section chunker","sublabel":"title + heading prefix","stage":1,"row":0},
-{"id":"embed","type":"backend","label":"bge-small + BM25","sublabel":"fastembed, local","stage":2,"row":0},
-{"id":"textidx","type":"database","label":"Text index","sublabel":"LanceDB FTS + vector","stage":3,"row":0},
-{"id":"pages","type":"database","label":"Page images","sublabel":"drawings, forms, PNG","stage":0,"row":2},
-{"id":"colpali","type":"backend","label":"ColPali embedder","sublabel":"ColSmol / ColQwen2.5","stage":2,"row":2},
-{"id":"pageidx","type":"database","label":"Page index","sublabel":"LanceDB multi-vector","stage":3,"row":2},
-{"id":"researcher","type":"backend","label":"researcher","sublabel":"hybrid + MaxSim","stage":4,"row":1}
-],
-"flows":[
-{"id":"f1","from":"docs","to":"chunk","label":"markdown","variant":"emphasis"},
-{"id":"f2","from":"chunk","to":"embed","label":"section chunks","variant":"emphasis"},
-{"id":"f3","from":"embed","to":"textidx","label":"vectors + terms","variant":"emphasis"},
-{"id":"f4","from":"textidx","to":"researcher","label":"ranked chunks"},
-{"id":"f5","from":"pages","to":"colpali","label":"page PNGs","variant":"emphasis"},
-{"id":"f6","from":"colpali","to":"pageidx","label":"patch vectors","variant":"emphasis"},
-{"id":"f7","from":"pageidx","to":"researcher","label":"top pages"}
-],
-"cards":[
-{"dot":"emerald","title":"Text path","items":["sitebrain ingest rebuilds the table","Each ## section is one chunk","BM25 index built at ingest"]},
-{"dot":"cyan","title":"Visual path","items":["Runs when SITEBRAIN_VISUAL=1","CPU: ColSmol-256M, 8 s per page","GPU 12 GB+: ColQwen2.5"]},
-{"dot":"rose","title":"At query time","items":["Lexical-first for exact IDs","Pages only if the planner asks","Injected text stripped first"]}
-]}
+{
+ "schema_version": 1,
+ "diagram_type": "dataflow",
+ "meta": {
+  "title": "SiteBrain Data Pipeline",
+  "output": "docs/diagrams/data-pipeline.html",
+  "quality_profile": "showcase",
+  "locale": "en"
+ },
+ "stages": [
+  {
+   "label": "Sources"
+  },
+  {
+   "label": "Prepare"
+  },
+  {
+   "label": "Embed"
+  },
+  {
+   "label": "Store"
+  },
+  {
+   "label": "Query time"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "docs",
+   "type": "database",
+   "label": "Markdown docs",
+   "sublabel": "reports, specs, HSE",
+   "stage": 0,
+   "row": 0
+  },
+  {
+   "id": "chunk",
+   "type": "backend",
+   "label": "Section chunker",
+   "sublabel": "title + heading prefix",
+   "stage": 1,
+   "row": 0
+  },
+  {
+   "id": "embed",
+   "type": "backend",
+   "label": "bge-small + BM25",
+   "sublabel": "fastembed, local",
+   "stage": 2,
+   "row": 0
+  },
+  {
+   "id": "textidx",
+   "type": "database",
+   "label": "Text index",
+   "sublabel": "LanceDB FTS + vector",
+   "stage": 3,
+   "row": 0
+  },
+  {
+   "id": "pages",
+   "type": "database",
+   "label": "Page images",
+   "sublabel": "drawings, forms, PNG",
+   "stage": 0,
+   "row": 2
+  },
+  {
+   "id": "colpali",
+   "type": "backend",
+   "label": "ColPali embedder",
+   "sublabel": "ColSmol / ColQwen2.5",
+   "stage": 2,
+   "row": 2
+  },
+  {
+   "id": "pageidx",
+   "type": "database",
+   "label": "Page index",
+   "sublabel": "LanceDB multi-vector",
+   "stage": 3,
+   "row": 2
+  },
+  {
+   "id": "researcher",
+   "type": "backend",
+   "label": "researcher",
+   "sublabel": "hybrid + MaxSim",
+   "stage": 4,
+   "row": 1
+  },
+  {
+   "id": "okf",
+   "type": "database",
+   "label": "OKF bundle",
+   "sublabel": "specs, RFIs, playbooks",
+   "stage": 0,
+   "row": 1
+  },
+  {
+   "id": "okfload",
+   "type": "backend",
+   "label": "OKF loader",
+   "sublabel": "trust, links, lifecycle",
+   "stage": 1,
+   "row": 1
+  }
+ ],
+ "flows": [
+  {
+   "id": "f1",
+   "from": "docs",
+   "to": "chunk",
+   "label": "markdown",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f2",
+   "from": "chunk",
+   "to": "embed",
+   "label": "section chunks",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f3",
+   "from": "embed",
+   "to": "textidx",
+   "label": "vectors + terms",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f4",
+   "from": "textidx",
+   "to": "researcher",
+   "label": "ranked chunks"
+  },
+  {
+   "id": "f5",
+   "from": "pages",
+   "to": "colpali",
+   "label": "page PNGs",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f6",
+   "from": "colpali",
+   "to": "pageidx",
+   "label": "patch vectors",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f7",
+   "from": "pageidx",
+   "to": "researcher",
+   "label": "top pages"
+  },
+  {
+   "id": "f8",
+   "from": "okf",
+   "to": "okfload",
+   "label": "concepts",
+   "variant": "emphasis"
+  },
+  {
+   "id": "f9",
+   "from": "okfload",
+   "to": "embed",
+   "label": "curated rows",
+   "variant": "emphasis"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "emerald",
+   "title": "Text path",
+   "items": [
+    "Raw docs: one chunk per ## section",
+    "OKF concepts: one row each, with provenance",
+    "Deprecated concepts are never indexed"
+   ]
+  },
+  {
+   "dot": "cyan",
+   "title": "Visual path",
+   "items": [
+    "Runs when SITEBRAIN_VISUAL=1",
+    "CPU: ColSmol-256M, 8 s per page",
+    "GPU 12 GB+: ColQwen2.5"
+   ]
+  },
+  {
+   "dot": "rose",
+   "title": "At query time",
+   "items": [
+    "Lexical-first for exact IDs",
+    "OKF links pull in amending decisions",
+    "Pages only if the planner asks"
+   ]
+  }
+ ]
+}

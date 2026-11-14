@@ -1,30 +1,176 @@
-{"schema_version":1,"diagram_type":"tree","meta":{"title":"SiteBrain Features","output":"docs/diagrams/features.html","quality_profile":"showcase","locale":"en"},
-"layout":{"direction":"down"},
-"nodes":[
-{"id":"root","label":"SiteBrain","sublabel":"Construction document assistant"},
-{"id":"agents","label":"Multi-agent reasoning","parent":"root","sublabel":"LangGraph"},
-{"id":"a1","label":"Planner routing","parent":"agents","sublabel":"answer, summary, RFI, pages"},
-{"id":"a2","label":"Cited answers","parent":"agents","sublabel":"chunk or page per claim"},
-{"id":"a3","label":"Critic loop","parent":"agents","sublabel":"grounded + answered, 2 retries"},
-{"id":"a4","label":"Human approval","parent":"agents","sublabel":"RFIs pause on interrupt"},
-{"id":"retrieval","label":"Retrieval","parent":"root","sublabel":"LanceDB"},
-{"id":"r1","label":"Hybrid search","parent":"retrieval","sublabel":"BM25 + vector, RRF"},
-{"id":"r2","label":"Lexical-first IDs","parent":"retrieval","sublabel":"INS-1007, TC-2, C15-01"},
-{"id":"r3","label":"Section chunking","parent":"retrieval","sublabel":"title + heading prefix"},
-{"id":"r4","label":"Visual page search","parent":"retrieval","sublabel":"ColPali, CPU or GPU"},
-{"id":"safety","label":"Guardrails","parent":"root","sublabel":"defence in depth"},
-{"id":"s1","label":"Injection blocking","parent":"safety","sublabel":"user input"},
-{"id":"s2","label":"Injection stripping","parent":"safety","sublabel":"retrieved documents"},
-{"id":"s3","label":"PII masking","parent":"safety","sublabel":"email, phone, EID, IBAN"},
-{"id":"s4","label":"Structured outputs","parent":"safety","sublabel":"Pydantic schemas"},
-{"id":"prod","label":"Production","parent":"root","sublabel":"service + ops"},
-{"id":"p1","label":"FastAPI service","parent":"prod","sublabel":"/ask, /rfi decision"},
-{"id":"p2","label":"Persistent checkpoints","parent":"prod","sublabel":"SQLite"},
-{"id":"p3","label":"Answer cache","parent":"prod","sublabel":"Redis or memory"},
-{"id":"p4","label":"Docker + CI","parent":"prod","sublabel":"image built and checked"},
-{"id":"eval","label":"Evaluation","parent":"root","sublabel":"measured, not claimed"},
-{"id":"e1","label":"End-to-end evals","parent":"eval","sublabel":"20 text + 12 visual"},
-{"id":"e2","label":"Retrieval benchmarks","parent":"eval","sublabel":"60 reports, 10 pages"},
-{"id":"e3","label":"Cost tracking","parent":"eval","sublabel":"tokens incl. cache"},
-{"id":"e4","label":"Offline mock","parent":"eval","sublabel":"32 tests without API"}
-]}
+{
+ "schema_version": 1,
+ "diagram_type": "tree",
+ "meta": {
+  "title": "SiteBrain Features",
+  "output": "docs/diagrams/features.html",
+  "quality_profile": "showcase",
+  "locale": "en"
+ },
+ "layout": {
+  "direction": "down"
+ },
+ "nodes": [
+  {
+   "id": "root",
+   "label": "SiteBrain",
+   "sublabel": "Construction document assistant"
+  },
+  {
+   "id": "agents",
+   "label": "Multi-agent reasoning",
+   "parent": "root",
+   "sublabel": "LangGraph"
+  },
+  {
+   "id": "a1",
+   "label": "Planner routing",
+   "parent": "agents",
+   "sublabel": "answer, summary, RFI, pages"
+  },
+  {
+   "id": "a2",
+   "label": "Cited answers",
+   "parent": "agents",
+   "sublabel": "chunk or page per claim"
+  },
+  {
+   "id": "a3",
+   "label": "Critic loop",
+   "parent": "agents",
+   "sublabel": "grounded + answered, 2 retries"
+  },
+  {
+   "id": "a4",
+   "label": "Human approval",
+   "parent": "agents",
+   "sublabel": "RFIs pause on interrupt"
+  },
+  {
+   "id": "retrieval",
+   "label": "Retrieval",
+   "parent": "root",
+   "sublabel": "LanceDB"
+  },
+  {
+   "id": "r1",
+   "label": "Hybrid search",
+   "parent": "retrieval",
+   "sublabel": "BM25 + vector, RRF"
+  },
+  {
+   "id": "r2",
+   "label": "Lexical-first IDs",
+   "parent": "retrieval",
+   "sublabel": "INS-1007, TC-2, C15-01"
+  },
+  {
+   "id": "r3",
+   "label": "Section chunking",
+   "parent": "retrieval",
+   "sublabel": "title + heading prefix"
+  },
+  {
+   "id": "r4",
+   "label": "Visual page search",
+   "parent": "retrieval",
+   "sublabel": "ColPali, CPU or GPU"
+  },
+  {
+   "id": "r5",
+   "label": "Curated knowledge",
+   "parent": "retrieval",
+   "sublabel": "OKF v0.2, trust + links"
+  },
+  {
+   "id": "safety",
+   "label": "Guardrails",
+   "parent": "root",
+   "sublabel": "defence in depth"
+  },
+  {
+   "id": "s1",
+   "label": "Injection blocking",
+   "parent": "safety",
+   "sublabel": "user input"
+  },
+  {
+   "id": "s2",
+   "label": "Injection stripping",
+   "parent": "safety",
+   "sublabel": "retrieved documents"
+  },
+  {
+   "id": "s3",
+   "label": "PII masking",
+   "parent": "safety",
+   "sublabel": "email, phone, EID, IBAN"
+  },
+  {
+   "id": "s4",
+   "label": "Structured outputs",
+   "parent": "safety",
+   "sublabel": "Pydantic schemas"
+  },
+  {
+   "id": "prod",
+   "label": "Production",
+   "parent": "root",
+   "sublabel": "service + ops"
+  },
+  {
+   "id": "p1",
+   "label": "FastAPI service",
+   "parent": "prod",
+   "sublabel": "/ask, /rfi decision"
+  },
+  {
+   "id": "p2",
+   "label": "Persistent checkpoints",
+   "parent": "prod",
+   "sublabel": "SQLite"
+  },
+  {
+   "id": "p3",
+   "label": "Answer cache",
+   "parent": "prod",
+   "sublabel": "Redis or memory"
+  },
+  {
+   "id": "p4",
+   "label": "Docker + CI",
+   "parent": "prod",
+   "sublabel": "image built and checked"
+  },
+  {
+   "id": "eval",
+   "label": "Evaluation",
+   "parent": "root",
+   "sublabel": "measured, not claimed"
+  },
+  {
+   "id": "e1",
+   "label": "End-to-end evals",
+   "parent": "eval",
+   "sublabel": "20 text, 8 OKF, 12 visual"
+  },
+  {
+   "id": "e2",
+   "label": "Retrieval benchmarks",
+   "parent": "eval",
+   "sublabel": "60 reports, 10 pages"
+  },
+  {
+   "id": "e3",
+   "label": "Cost tracking",
+   "parent": "eval",
+   "sublabel": "tokens incl. cache"
+  },
+  {
+   "id": "e4",
+   "label": "Offline mock",
+   "parent": "eval",
+   "sublabel": "38 tests without API"
+  }
+ ]
+}

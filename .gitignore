@@ -12,3 +12,5 @@ evals/retrieval_results*.json
 evals/last_results_visual.json
 evals/visual_results.json
 .archify/
+evals/last_results_okf_*.json
+data/lancedb_*/

@@ -44,8 +44,11 @@ def _norm(text: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--visual", action="store_true", help="run the page-image questions")
+    parser.add_argument("--okf", action="store_true", help="run the curated-knowledge (OKF bundle) questions")
     args = parser.parse_args()
     dataset = DATASET
+    if args.okf:
+        dataset = Path(__file__).with_name("okf_dataset.jsonl")
     if args.visual:
         os.environ["SITEBRAIN_VISUAL"] = "1"
         dataset = Path(__file__).with_name("visual_queries.jsonl")
@@ -81,6 +84,8 @@ def main() -> int:
             row["hit"] = bool(set(case["expected_docs"]) & retrieved_docs) if case["expected_docs"] else None
             kws = case["expected_keywords"]
             row["kw_recall"] = sum(_norm(k) in _norm(final) for k in kws) / len(kws) if kws else None
+            if "must_not" in case:  # a superseded value in the answer means stale knowledge was used
+                row["stale_free"] = not any(_norm(k) in _norm(final) for k in case["must_not"])
             row["grounded"] = bool(out.get("critique", {}).get("grounded"))
             row["cite_valid"] = (sum(c in retrieved_ids for c in cites) / len(cites)) if cites else None
             if case["kind"] == "visual":
@@ -105,6 +110,8 @@ def main() -> int:
         "keyword_recall": mean("kw_recall", gen),
         "grounded_rate": mean("grounded", gen),
         "citation_validity": mean("cite_valid", gen),
+        "stale_free": mean("stale_free", gen),
+        "sources": settings.sources,
         "injection_blocked": mean("blocked", {"injection"}),
         "indirect_quarantined": mean("quarantined", {"indirect_injection"}),
         "routed_to_pages": mean("routed", {"visual"}),
@@ -122,7 +129,8 @@ def main() -> int:
                                + agents.llm.usage.cache_read_tokens * 0.4 + agents.llm.usage.output_tokens * 20) / 1e6, 3),
     }
     print("\nSUMMARY " + json.dumps(summary, indent=2))
-    Path(__file__).with_name("last_results_visual.json" if args.visual else "last_results.json").write_text(json.dumps({"summary": summary, "rows": rows}, indent=2))
+    Path(__file__).with_name("last_results_visual.json" if args.visual else
+                            f"last_results_okf_{settings.sources}.json" if args.okf else "last_results.json").write_text(json.dumps({"summary": summary, "rows": rows}, indent=2))
     return 0
 
 

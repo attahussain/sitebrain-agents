@@ -5246,12 +5246,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
         <!-- Flow paths -->
         <path data-edge-from="docs" data-edge-to="chunk" data-edge-label="markdown" data-edge-key="0" data-edge-id="f1" data-composition-points="156,157;259,157" d="M 156 157 L 259 157" class="a-emphasis" data-animate="edge" style="--step:0" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="chunk" data-edge-to="embed" data-edge-label="section chunks" data-edge-key="1" data-edge-id="f2" data-composition-points="371,157;474,157" d="M 371 157 L 474 157" class="a-emphasis" data-animate="edge" style="--step:1" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="chunk" data-edge-to="embed" data-edge-label="section chunks" data-edge-key="1" data-edge-id="f2" data-composition-points="371,148;474,148" d="M 371 148 L 474 148" class="a-emphasis" data-animate="edge" style="--step:1" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="embed" data-edge-to="textidx" data-edge-label="vectors + terms" data-edge-key="2" data-edge-id="f3" data-composition-points="586,157;689,157" d="M 586 157 L 689 157" class="a-emphasis" data-animate="edge" style="--step:2" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="textidx" data-edge-to="researcher" data-edge-label="ranked chunks" data-edge-key="3" data-edge-id="f4" data-composition-points="801,157;852.5,157;852.5,262;904,262" d="M 801 157 L 852.5 157 L 852.5 262 L 904 262" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <path data-edge-from="pages" data-edge-to="colpali" data-edge-label="page PNGs" data-edge-key="4" data-edge-id="f5" data-composition-points="156,385;474,385" d="M 156 385 L 474 385" class="a-emphasis" data-animate="edge" style="--step:4" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="colpali" data-edge-to="pageidx" data-edge-label="patch vectors" data-edge-key="5" data-edge-id="f6" data-composition-points="586,385;689,385" d="M 586 385 L 689 385" class="a-emphasis" data-animate="edge" style="--step:5" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="pageidx" data-edge-to="researcher" data-edge-label="top pages" data-edge-key="6" data-edge-id="f7" data-composition-points="801,385;852.5,385;852.5,280;904,280" d="M 801 385 L 852.5 385 L 852.5 280 L 904 280" class="a-default" data-animate="edge" style="--step:6" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="okf" data-edge-to="okfload" data-edge-label="concepts" data-edge-key="7" data-edge-id="f8" data-composition-points="156,271;259,271" d="M 156 271 L 259 271" class="a-emphasis" data-animate="edge" style="--step:7" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="okfload" data-edge-to="embed" data-edge-label="curated rows" data-edge-key="8" data-edge-id="f9" data-composition-points="371,271;422.5,271;422.5,166;474,166" d="M 371 271 L 422.5 271 L 422.5 166 L 474 166" class="a-emphasis" data-animate="edge" style="--step:8" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
 
         <!-- Nodes -->
         <g id="node-docs" data-node-id="docs" data-node-label="Markdown docs" tabindex="0" role="button" aria-label="Focus Markdown docs, reports, specs, HSE, 01 / Sources" aria-pressed="false" data-node-kind="database" data-node-sublabel="reports, specs, HSE" data-node-context="01 / Sources">
@@ -5346,14 +5348,37 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <text data-detail="context" x="960" y="279" class="t-muted" font-size="7" text-anchor="middle">hybrid + MaxSim</text>
         </g>
 
+        <g id="node-okf" data-node-id="okf" data-node-label="OKF bundle" tabindex="0" role="button" aria-label="Focus OKF bundle, specs, RFIs, playbooks, 01 / Sources" aria-pressed="false" data-node-kind="database" data-node-sublabel="specs, RFIs, playbooks" data-node-context="01 / Sources">
+          <title>OKF bundle · specs, RFIs, playbooks · 01 / Sources</title>
+          <rect x="44" y="242" width="112" height="58" rx="6" class="c-mask"/>
+          <rect x="44" y="242" width="112" height="58" rx="6" class="c-database" data-animate="node" style="--step:7" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(50 248) scale(0.6875)">
+            <ellipse cx="8" cy="4" rx="5" ry="2"/>
+            <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="100" y="263" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">OKF bundle</text>
+          <text data-detail="context" x="100" y="279" class="t-muted" font-size="7" text-anchor="middle">specs, RFIs, playbooks</text>
+        </g>
+
+        <g id="node-okfload" data-node-id="okfload" data-node-label="OKF loader" tabindex="0" role="button" aria-label="Focus OKF loader, trust, links, lifecycle, 02 / Prepare" aria-pressed="false" data-node-kind="backend" data-node-sublabel="trust, links, lifecycle" data-node-context="02 / Prepare">
+          <title>OKF loader · trust, links, lifecycle · 02 / Prepare</title>
+          <rect x="259" y="242" width="112" height="58" rx="6" class="c-mask"/>
+          <rect x="259" y="242" width="112" height="58" rx="6" class="c-backend" data-animate="node" style="--step:8" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(265 248) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="315" y="263" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">OKF loader</text>
+          <text data-detail="context" x="315" y="279" class="t-muted" font-size="7" text-anchor="middle">trust, links, lifecycle</text>
+        </g>
+
         <!-- Flow labels -->
         <g data-detail="context" data-edge-from="docs" data-edge-to="chunk" data-edge-label="markdown" data-edge-key="0" data-edge-id="f1">
           <rect x="181.9" y="136" width="51.2" height="16" rx="4" class="c-mask"/>
           <text x="207.5" y="147" class="t-edge-emphasis" font-size="8" text-anchor="middle">markdown</text>
         </g>
         <g data-detail="context" data-edge-from="chunk" data-edge-to="embed" data-edge-label="section chunks" data-edge-key="1" data-edge-id="f2">
-          <rect x="382.2" y="136" width="80.6" height="16" rx="4" class="c-mask"/>
-          <text x="422.5" y="147" class="t-edge-emphasis" font-size="8" text-anchor="middle">section chunks</text>
+          <rect x="382.2" y="127" width="80.6" height="16" rx="4" class="c-mask"/>
+          <text x="422.5" y="138" class="t-edge-emphasis" font-size="8" text-anchor="middle">section chunks</text>
         </g>
         <g data-detail="context" data-edge-from="embed" data-edge-to="textidx" data-edge-label="vectors + terms" data-edge-key="2" data-edge-id="f3">
           <rect x="594.75" y="136" width="85.5" height="16" rx="4" class="c-mask"/>
@@ -5374,6 +5399,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <g data-detail="context" data-edge-from="pageidx" data-edge-to="researcher" data-edge-label="top pages" data-edge-key="6" data-edge-id="f7">
           <rect x="824.45" y="311.5" width="56.1" height="16" rx="4" class="c-mask"/>
           <text x="852.5" y="322.5" class="t-edge-default" font-size="8" text-anchor="middle">top pages</text>
+        </g>
+        <g data-detail="context" data-edge-from="okf" data-edge-to="okfload" data-edge-label="concepts" data-edge-key="7" data-edge-id="f8">
+          <rect x="181.9" y="250" width="51.2" height="16" rx="4" class="c-mask"/>
+          <text x="207.5" y="261" class="t-edge-emphasis" font-size="8" text-anchor="middle">concepts</text>
+        </g>
+        <g data-detail="context" data-edge-from="okfload" data-edge-to="embed" data-edge-label="curated rows" data-edge-key="8" data-edge-id="f9">
+          <rect x="387.1" y="197.5" width="70.8" height="16" rx="4" class="c-mask"/>
+          <text x="422.5" y="208.5" class="t-edge-emphasis" font-size="8" text-anchor="middle">curated rows</text>
         </g>
 
         <!-- Legend -->
@@ -5575,9 +5608,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Text path</h3>
         </div>
         <ul>
-          <li>sitebrain ingest rebuilds the table</li>
-          <li>Each ## section is one chunk</li>
-          <li>BM25 index built at ingest</li>
+          <li>Raw docs: one chunk per ## section</li>
+          <li>OKF concepts: one row each, with provenance</li>
+          <li>Deprecated concepts are never indexed</li>
         </ul>
       </div>
 
@@ -5600,8 +5633,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </div>
         <ul>
           <li>Lexical-first for exact IDs</li>
+          <li>OKF links pull in amending decisions</li>
           <li>Pages only if the planner asks</li>
-          <li>Injected text stripped first</li>
         </ul>
       </div>
     </div>
