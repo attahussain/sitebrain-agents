@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
     conn.close()
 
 
-app = FastAPI(title="SiteBrain", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="SiteBrain", version="0.3.0", lifespan=lifespan)
 
 
 def _response(result: dict, thread_id: str) -> AskResponse:
@@ -91,7 +91,8 @@ def health():
 @app.get("/metrics")
 def metrics():
     u = app.state.agents.llm.usage
-    return {"llm_calls": u.calls, "input_tokens": u.input_tokens, "output_tokens": u.output_tokens,
+    return {"llm_calls": u.calls, "input_tokens": u.total_input_tokens, "cache_write_tokens": u.cache_write_tokens,
+            "cache_read_tokens": u.cache_read_tokens, "output_tokens": u.output_tokens,
             "cache_hits": app.state.cache_hits}
 
 

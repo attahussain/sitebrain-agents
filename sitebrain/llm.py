@@ -24,15 +24,24 @@ class RefusalError(RuntimeError):
 
 @dataclass
 class Usage:
+    # The API can cache prompt prefixes automatically. Cached tokens are reported separately from
+    # input_tokens, so all three input fields are needed to see what a request actually cost.
     input_tokens: int = 0
+    cache_write_tokens: int = 0
+    cache_read_tokens: int = 0
     output_tokens: int = 0
     calls: int = 0
+
+    @property
+    def total_input_tokens(self) -> int:
+        return self.input_tokens + self.cache_write_tokens + self.cache_read_tokens
 
 
 class LLM(Protocol):
     usage: Usage
 
-    def structured(self, system: str, user: str, schema: type[T], context: dict | None = None) -> T: ...
+    # `user` is plain text, or a list of content blocks when page images are attached.
+    def structured(self, system: str, user: str | list, schema: type[T], context: dict | None = None) -> T: ...
 
 
 class ClaudeLLM:
@@ -44,7 +53,7 @@ class ClaudeLLM:
         self.effort = settings.effort
         self.usage = Usage()
 
-    def structured(self, system: str, user: str, schema: type[T], context: dict | None = None) -> T:
+    def structured(self, system: str, user: str | list, schema: type[T], context: dict | None = None) -> T:
         response = self._client.beta.messages.parse(
             model=self.model,
             max_tokens=16000,
@@ -58,6 +67,8 @@ class ClaudeLLM:
         )
         self.usage.calls += 1
         self.usage.input_tokens += response.usage.input_tokens
+        self.usage.cache_write_tokens += response.usage.cache_creation_input_tokens or 0
+        self.usage.cache_read_tokens += response.usage.cache_read_input_tokens or 0
         self.usage.output_tokens += response.usage.output_tokens
         if response.stop_reason == "refusal":
             category = response.stop_details.category if response.stop_details else None
@@ -96,11 +107,12 @@ class MockLLM:
     def __init__(self, settings: Settings | None = None):
         self.usage = Usage()
 
-    def structured(self, system: str, user: str, schema: type[T], context: dict | None = None) -> T:
+    def structured(self, system: str, user: str | list, schema: type[T], context: dict | None = None) -> T:
         ctx = context or {}
         self.usage.calls += 1
         question = ctx.get("question", "")
         docs = ctx.get("docs", [])
+        pages = ctx.get("pages", [])
         if schema is Plan:
             q = question.lower()
             if re.search(r"\brfi\b|request for information|draft (an? )?(rfi|query|letter|email)", q):
@@ -109,9 +121,13 @@ class MockLLM:
                 route = "summarize"
             else:
                 route = "answer"
-            return Plan(route=route, search_query=question, reasoning="keyword routing (mock)")
+            visual = bool(re.search(r"drawing|revision|schedule|checklist|form\b|plan\b|chart|layout", q))
+            return Plan(route=route, search_query=question, search_pages=visual, reasoning="keyword routing (mock)")
         if schema is Answer:
             picked = _best_sentences(question, docs)
+            if pages:  # the mock cannot read images; it points at the top page so routing can be tested
+                top = pages[0]["chunk_id"]
+                return Answer(answer=f"See {pages[0]['page_id']} [{top}].", citations=[top])
             if not picked:
                 return Answer(answer="I could not find this in the project documents.", citations=[])
             return Answer(
@@ -120,7 +136,7 @@ class MockLLM:
             )
         if schema is Critique:
             draft_cites = set(ctx.get("citations", []))
-            retrieved = {d["chunk_id"] for d in docs}
+            retrieved = {d["chunk_id"] for d in docs} | {p["chunk_id"] for p in pages}
             if not draft_cites:
                 return Critique(grounded=False, answered=False, issues=["No sources cited"],
                                 retry_query=f"{question} specification")

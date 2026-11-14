@@ -18,6 +18,16 @@ from sitebrain.llm import LLM, make_llm
 from sitebrain.store import DocStore
 
 
+def open_page_store(settings: Settings):
+    """Load the visual page index, building it on first use. Imported lazily: needs the [visual] extra."""
+    from sitebrain.visual import PAGE_TABLE, PageStore
+
+    page_store = PageStore(settings)
+    if PAGE_TABLE not in page_store.db.list_tables().tables:
+        page_store.index()
+    return page_store
+
+
 def _timed(name: str, node: Callable[[State], State]) -> Callable[[State], State]:
     """Record each node's wall-clock time in state["timings"] for per-request tracing."""
 
@@ -31,9 +41,12 @@ def _timed(name: str, node: Callable[[State], State]) -> Callable[[State], State
 
 
 def build_graph(llm: LLM | None = None, store: DocStore | None = None, settings: Settings | None = None,
-                checkpointer: BaseCheckpointSaver | None = None):
+                checkpointer: BaseCheckpointSaver | None = None, page_store=None):
     settings = settings or get_settings()
-    agents = Agents(llm or make_llm(settings), store or DocStore(settings), settings.max_research_attempts)
+    if page_store is None and settings.visual:
+        page_store = open_page_store(settings)
+    agents = Agents(llm or make_llm(settings), store or DocStore(settings), settings.max_research_attempts,
+                    page_store=page_store)
 
     g = StateGraph(State)
     for name, node in [

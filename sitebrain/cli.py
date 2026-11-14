@@ -31,7 +31,7 @@ def run_question(question: str, approve: str | None = None, show_trace: bool = T
         for step in result.get("trace", []):
             print(" ", step)
         u = agents.llm.usage
-        print(f"--- llm calls={u.calls} input_tokens={u.input_tokens} output_tokens={u.output_tokens}")
+        print(f"--- llm calls={u.calls} input_tokens={u.total_input_tokens} (cached reads {u.cache_read_tokens}) output_tokens={u.output_tokens}")
     print("\n=== ANSWER ===\n" + result.get("final", ""))
     return result
 
@@ -46,8 +46,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.cmd == "ingest":
-        n = DocStore(get_settings()).ingest()
+        settings = get_settings()
+        n = DocStore(settings).ingest()
         print(f"Indexed {n} chunks.")
+        if settings.visual:
+            from sitebrain.visual import PageStore
+
+            pages = PageStore(settings)
+            print(f"Indexed {pages.index()} page images with {pages.embedder.name} "
+                  f"in {pages.last_index_seconds:.1f}s.")
         return 0
     run_question(args.question, approve=args.approve)
     return 0

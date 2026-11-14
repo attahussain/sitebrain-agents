@@ -13,6 +13,10 @@ class Plan(BaseModel):
         "draft_rfi = the user wants a Request For Information drafted for the consultant"
     )
     search_query: str = Field(description="A focused search query for the document store")
+    search_pages: bool = Field(
+        description="True if the answer is likely shown visually: a drawing, drawing number or revision, "
+        "bar bending schedule, checklist or form, site plan, or progress chart"
+    )
     reasoning: str = Field(description="One sentence explaining the route")
 
 
