@@ -5,3 +5,7 @@ __pycache__/
 data/lancedb/
 evals/last_results.json
 .env
+data/scale_docs/
+data/*.sqlite
+evals/scale_queries.jsonl
+evals/retrieval_results*.json
