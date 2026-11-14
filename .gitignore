@@ -9,3 +9,5 @@ data/scale_docs/
 data/*.sqlite
 evals/scale_queries.jsonl
 evals/retrieval_results*.json
+evals/last_results_visual.json
+evals/visual_results.json

@@ -1,0 +1,12 @@
+{"id": "v01", "question": "Which drawing shows the Level 15 column layout?", "expected_pages": ["S-215"], "expected_keywords": ["S-215"]}
+{"id": "v02", "question": "Which column on Level 15 is enlarged to support the transfer beam?", "expected_pages": ["S-215"], "expected_keywords": ["C15-07"]}
+{"id": "v03", "question": "What size is the enlarged column on Level 13?", "expected_pages": ["S-213"], "expected_keywords": ["650"]}
+{"id": "v04", "question": "What is the current revision of the Level 14 column layout drawing?", "expected_pages": ["S-214"], "expected_keywords": ["S-214"]}
+{"id": "v05", "question": "What bar diameter is specified for the C15-07 main bars?", "expected_pages": ["BBS-15"], "expected_keywords": ["32"]}
+{"id": "v06", "question": "How many links are scheduled for the Level 15 columns?", "expected_pages": ["BBS-15"], "expected_keywords": ["38"]}
+{"id": "v07", "question": "What slump was recorded on the Level 14 slab pour checklist?", "expected_pages": ["CHK-L14"], "expected_keywords": ["110"]}
+{"id": "v08", "question": "Which slab pour checklist shows cube samples were not taken?", "expected_pages": ["CHK-L15"], "expected_keywords": ["15"]}
+{"id": "v09", "question": "Who inspected the Level 13 slab pour?", "expected_pages": ["CHK-L13"], "expected_keywords": ["QA-01"]}
+{"id": "v10", "question": "Where is tower crane TC-2 positioned on the logistics plan?", "expected_pages": ["LOG-P2"], "expected_keywords": ["south"]}
+{"id": "v11", "question": "Which gate is next to the concrete pump station?", "expected_pages": ["LOG-P2"], "expected_keywords": ["Gate 2"]}
+{"id": "v12", "question": "Was the Level 15 slab completed on its planned date?", "expected_pages": ["PRG-STR"], "expected_keywords": ["24"]}
