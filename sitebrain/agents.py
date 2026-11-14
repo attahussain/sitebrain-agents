@@ -45,7 +45,9 @@ SUMMARY_SYS = WRITER_SYS + " Produce a concise bullet summary of the key facts, 
 CRITIC_SYS = (
     "You are a strict reviewer. Check every claim in the draft against the sources. A draft is "
     "grounded only if each factual claim is supported by a cited source and every citation exists. "
-    "If evidence is missing, propose a better search query."
+    "Separately judge whether it answers the question: a draft that says the sources lack the "
+    "information is not answered. If evidence is missing or the question is unanswered, propose a "
+    "different search query that would find it (other wording, the likely document type or section)."
 )
 RFI_SYS = (
     "You draft a Request For Information (RFI) from the site team to the project consultant. "
@@ -116,8 +118,9 @@ class Agents:
         ctx = {"question": state["question"], "docs": state["docs"], "citations": state.get("citations", [])}
         prompt = f"{_sources(state['docs'])}\n\nQuestion: {state['question']}\n\nDraft:\n{state['draft']}"
         c = self.llm.structured(CRITIC_SYS, prompt, Critique, context=ctx)
-        update: State = {"critique": c.model_dump(), "trace": [f"critic: grounded={c.grounded} issues={c.issues}"]}
-        if not c.grounded and c.retry_query:
+        update: State = {"critique": c.model_dump(),
+                         "trace": [f"critic: grounded={c.grounded} answered={c.answered} issues={c.issues}"]}
+        if (not c.grounded or not c.answered) and c.retry_query:
             update["search_query"] = c.retry_query
         return update
 
@@ -146,6 +149,7 @@ class Agents:
 
     def after_critic(self, state: State) -> str:
         critique = state.get("critique", {})
-        if not critique.get("grounded") and critique.get("retry_query") and state.get("attempts", 0) < self.max_attempts:
+        needs_more = not critique.get("grounded") or not critique.get("answered", True)
+        if needs_more and critique.get("retry_query") and state.get("attempts", 0) < self.max_attempts:
             return "retry"
         return "rfi" if state.get("route") == "draft_rfi" else "done"

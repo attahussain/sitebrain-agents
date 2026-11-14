@@ -23,6 +23,15 @@ The cost is flexibility: a new capability means a new node and edge, not a new p
 **Bounded critic loop.** An unbounded generate/critique loop can spin on a question the documents cannot
 answer. After the last attempt the answer is returned with a visible caution instead of looping again.
 
+**Grounded is not the same as answered.** "The sources do not say" is a perfectly grounded sentence, and
+the first critic accepted it, so a retrieval miss ended the run without a second search. The critic now
+returns `answered` alongside `grounded`, and either failing triggers a retry with a reworded query.
+
+**Section-level chunks with a context prefix.** Packing paragraphs into fixed-size chunks put a scaffold
+rule and three heat-stress rules into one vector, and the scaffold rule became unfindable. Each `##`
+section is now its own chunk, prefixed with "document title - section heading" so the embedding and the
+writer both see where the text came from.
+
 **Strip injected sentences instead of dropping the chunk.** The first version discarded any chunk that
 contained an injection. The evaluation showed the cost: the poisoned supplier note was also the only
 source of the delivery window, so the system could no longer answer that question. Removing only the

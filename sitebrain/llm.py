@@ -122,11 +122,13 @@ class MockLLM:
             draft_cites = set(ctx.get("citations", []))
             retrieved = {d["chunk_id"] for d in docs}
             if not draft_cites:
-                return Critique(grounded=False, issues=["No sources cited"], retry_query=f"{question} specification")
+                return Critique(grounded=False, answered=False, issues=["No sources cited"],
+                                retry_query=f"{question} specification")
             bad = sorted(draft_cites - retrieved)
             if bad:
-                return Critique(grounded=False, issues=[f"Cites unknown sources: {bad}"], retry_query=question)
-            return Critique(grounded=True, issues=[], retry_query="")
+                return Critique(grounded=False, answered=True, issues=[f"Cites unknown sources: {bad}"],
+                                retry_query=question)
+            return Critique(grounded=True, answered=True, issues=[], retry_query="")
         if schema is RFIDraft:
             picked = _best_sentences(question, docs)
             facts = "\n".join(f"- {s} [{cid}]" for s, cid in picked) or "- (no supporting records found)"

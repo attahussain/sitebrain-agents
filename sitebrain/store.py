@@ -40,17 +40,35 @@ def _hash_embed(text: str) -> list[float]:
 
 
 def chunk_markdown(doc_id: str, text: str, max_chars: int = 700) -> list[dict]:
-    """Split on headings/blank lines, then pack paragraphs into chunks of ~max_chars."""
-    title = next((ln.lstrip("# ").strip() for ln in text.splitlines() if ln.startswith("#")), doc_id)
-    paras = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
-    chunks, buf = [], ""
-    for p in paras:
-        if buf and len(buf) + len(p) > max_chars:
-            chunks.append(buf)
-            buf = ""
-        buf = f"{buf}\n\n{p}" if buf else p
-    if buf:
-        chunks.append(buf)
+    """One chunk per `##` section, prefixed with "<doc title> - <section>".
+
+    Section-level chunks keep unrelated topics apart (a scaffold rule must not share an embedding with
+    heat-stress rules), and the prefix carries context the section body alone does not.
+    Oversized sections are packed by paragraph up to ~max_chars.
+    """
+    lines = text.splitlines()
+    title = next((ln.lstrip("# ").strip() for ln in lines if ln.startswith("# ")), doc_id)
+    sections: list[tuple[str, list[str]]] = [("", [])]
+    for ln in lines:
+        if ln.startswith("## "):
+            sections.append((ln[3:].strip(), []))
+        elif not ln.startswith("# "):
+            sections[-1][1].append(ln)
+
+    chunks: list[str] = []
+    for heading, body_lines in sections:
+        body = "\n".join(body_lines).strip()
+        if not body:
+            continue
+        prefix = f"{title} - {heading}" if heading else title
+        buf = ""
+        for para in (p.strip() for p in re.split(r"\n\s*\n", body) if p.strip()):
+            if buf and len(buf) + len(para) > max_chars:
+                chunks.append(f"{prefix}\n{buf}")
+                buf = ""
+            buf = f"{buf}\n\n{para}" if buf else para
+        if buf:
+            chunks.append(f"{prefix}\n{buf}")
     return [
         {"chunk_id": f"{doc_id}#{i}", "doc_id": doc_id, "title": title, "text": c}
         for i, c in enumerate(chunks)

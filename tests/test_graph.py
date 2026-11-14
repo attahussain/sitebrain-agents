@@ -41,6 +41,15 @@ def test_pii_is_masked_in_output(offline_settings):
     assert "+971 50 000 0000" not in out["final"]
 
 
+def test_unanswered_question_triggers_bounded_retry(offline_settings):
+    # Nothing in the corpus answers this, so the critic marks it unanswered and the researcher retries,
+    # but never more than SITEBRAIN_MAX_ATTEMPTS times.
+    _, _, out = _run(offline_settings, "What is the zoning permit number for the parking podium?")
+    research_passes = [t for t in out["trace"] if t.startswith("researcher")]
+    assert len(research_passes) == offline_settings.max_research_attempts
+    assert out["critique"]["answered"] is False
+
+
 def test_rfi_requires_human_approval(offline_settings):
     graph, config, out = _run(offline_settings, "Draft an RFI about the Level 15 column concrete cover failure")
     assert "__interrupt__" in out  # paused, nothing released yet

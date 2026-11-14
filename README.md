@@ -76,7 +76,7 @@ python -m sitebrain.cli ask "Why did the Level 15 column rebar inspection fail?"
 ## Tests and evaluation
 
 ```bash
-pytest                                        # 17 offline tests: guardrails, routing, HITL pause/resume
+pytest                                        # 20 offline tests: chunking, guardrails, routing, retries, HITL
 python evals/run_evals.py                     # 14-case eval against Claude (needs API key)
 set SITEBRAIN_PROVIDER=mock && python evals/run_evals.py   # same eval offline
 ```
@@ -84,14 +84,16 @@ set SITEBRAIN_PROVIDER=mock && python evals/run_evals.py   # same eval offline
 Metrics: retrieval hit rate, answer keyword recall, groundedness rate (critic), citation validity
 (no invented sources), direct-injection block rate, indirect-injection quarantine rate, latency, token usage.
 
-**Offline baseline** (mock model + real embeddings, 14 cases):
+**Results with Claude Opus 5.5** (14 cases, 36 model calls, about USD 0.25 per run):
 
-| retrieval_hit | keyword_recall | grounded | citation_validity | injection_blocked | indirect_quarantined |
-|---|---|---|---|---|---|
-| 1.00 | 0.92 | 1.00 | 1.00 | 1.00 | 1.00 |
+| retrieval_hit | keyword_recall | grounded | citation_validity | injection_blocked | indirect_quarantined | avg latency |
+|---|---|---|---|---|---|---|
+| 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 5.2 s |
 
-The mock model copies sentences from retrieved chunks, so these numbers measure retrieval and
-guardrails, not answer quality. Run the eval with `SITEBRAIN_PROVIDER=claude` for generation metrics.
+The first Claude run scored 0.91 on retrieval and missed one question. Fixing it led to section-level
+chunking and a critic that distinguishes "grounded" from "answered"; see
+[docs/evaluation.md](docs/evaluation.md) for the before/after numbers. CI runs the same suite offline with a
+mock model.
 
 ## Documentation
 

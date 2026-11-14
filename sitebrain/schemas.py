@@ -26,8 +26,9 @@ class Answer(BaseModel):
 class Critique(BaseModel):
     """Critic verdict on whether the draft is fully supported by the retrieved sources."""
 
-    grounded: bool
-    issues: list[str] = Field(description="Unsupported or wrong claims; empty if grounded")
+    grounded: bool = Field(description="Every factual claim is supported by a cited source")
+    answered: bool = Field(description="The draft actually answers the question, rather than saying the sources lack it")
+    issues: list[str] = Field(description="Unsupported claims or missing information; empty if none")
     retry_query: str = Field(description="Better search query if more evidence is needed, else empty")
 
 

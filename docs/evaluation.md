@@ -24,18 +24,29 @@ answer should contain.
 
 ## Results
 
-Offline run (`SITEBRAIN_PROVIDER=mock`, real `bge-small` embeddings):
+Claude Opus 5.5 (`effort=medium`), `bge-small` embeddings, 14 cases:
 
-| retrieval_hit | keyword_recall | grounded | citation_validity | injection_blocked | indirect_quarantined |
-|---|---|---|---|---|---|
-| 1.00 | 0.92 | 1.00 | 1.00 | 1.00 | 1.00 |
+| Run | retrieval_hit | keyword_recall | grounded | citation_validity | injection_blocked | indirect_quarantined | avg latency | tokens in / out |
+|---|---|---|---|---|---|---|---|---|
+| Before fixes | 0.91 | 0.92 | 1.00 | 1.00 | 1.00 | 1.00 | 8.5 s | 48.8K / 6.6K |
+| **Current** | **1.00** | **1.00** | **1.00** | **1.00** | **1.00** | **1.00** | **5.2 s** | **36.7K / 4.9K** |
 
-The single miss is the safety summary (q10): the extractive mock picked three sentences that did not
-mention the scaffold incident. This run validates retrieval, routing and guardrails; it does not measure
-generation quality.
+A full run makes 36 model calls and costs roughly USD 0.25 at list prices.
 
-## History
+Offline run (`SITEBRAIN_PROVIDER=mock`): retrieval_hit 1.00, keyword_recall 0.92, all guardrail metrics 1.00.
+The mock is extractive and misses the safety summary (q10); it is there to validate retrieval, routing and
+guardrails in CI, not generation quality.
 
-- Indirect-injection handling originally dropped the whole poisoned chunk. That passed the security check
-  but failed q14, because the same chunk held the only copy of the delivery window. Switching to
-  sentence-level stripping fixed q14 without weakening the defence (both are covered by tests).
+## What the evaluation changed
+
+- **Indirect injection.** Handling originally dropped the whole poisoned chunk. That passed the security
+  check but failed q14, because the same chunk held the only copy of the delivery window. Sentence-level
+  stripping fixed q14 without weakening the defence.
+- **Chunking (q09).** The first Claude run missed "How often must scaffolds be re-inspected?". The HSE
+  policy had been indexed as a single chunk that opened with heat-stress rules, so its embedding did not
+  match a scaffold query and the scaffold section was never retrieved. Chunking per `##` section, with a
+  "document - section" prefix on each chunk, fixed retrieval. Smaller, focused chunks also cut input
+  tokens by about 25% and average latency from 8.5 s to 5.2 s.
+- **Critic blind spot (q09).** In the same failure the writer correctly said the sources did not contain
+  the answer, and the critic passed it as grounded, so no second search ran. The critic now reports
+  `answered` separately from `grounded`, and an unanswered question triggers a retry with a reworded query.
