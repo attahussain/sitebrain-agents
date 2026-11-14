@@ -22,7 +22,14 @@ class Settings:
     docs_dir: Path = field(default_factory=lambda: Path(_env("SITEBRAIN_DOCS", str(ROOT / "data" / "docs"))))
     db_dir: Path = field(default_factory=lambda: Path(_env("SITEBRAIN_DB", str(ROOT / "data" / "lancedb"))))
     top_k: int = field(default_factory=lambda: int(_env("SITEBRAIN_TOP_K", "4")))
+    # "hybrid" (BM25 + vector, fused by RRF), "vector" or "keyword".
+    search_mode: str = field(default_factory=lambda: _env("SITEBRAIN_SEARCH_MODE", "hybrid"))
     max_research_attempts: int = field(default_factory=lambda: int(_env("SITEBRAIN_MAX_ATTEMPTS", "2")))
+    # API service: SQLite file for LangGraph checkpoints (paused RFIs survive restarts).
+    checkpoint_db: Path = field(default_factory=lambda: Path(_env("SITEBRAIN_CHECKPOINT_DB", str(ROOT / "data" / "checkpoints.sqlite"))))
+    # Answer cache: Redis when REDIS_URL is set, otherwise in-process. TTL in seconds; 0 disables caching.
+    redis_url: str = field(default_factory=lambda: _env("REDIS_URL", ""))
+    cache_ttl: int = field(default_factory=lambda: int(_env("SITEBRAIN_CACHE_TTL", "3600")))
 
 
 def get_settings() -> Settings:

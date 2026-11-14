@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 import lancedb
+from lancedb.index import FTS
 
 from sitebrain.config import Settings
 
@@ -90,20 +91,86 @@ class DocStore:
         vectors = self.embedder.embed([r["text"] for r in rows])
         for row, vec in zip(rows, vectors):
             row["vector"] = vec
-        self.db.create_table(TABLE, data=rows, mode="overwrite")
+        table = self.db.create_table(TABLE, data=rows, mode="overwrite")
+        # BM25 inverted index over chunk text, used by keyword and hybrid search.
+        table.create_index("text", config=FTS(), replace=True)
         return len(rows)
 
-    def search(self, query: str, k: int | None = None) -> list[dict]:
+    def search(self, query: str, k: int | None = None, mode: str | None = None) -> list[dict]:
+        """Retrieve the top-k chunks. mode: "vector", "keyword" (BM25) or "hybrid" (both, fused by RRF)."""
+        k = k or self.settings.top_k
+        mode = mode or self.settings.search_mode
+        if mode == "vector":
+            return self._vector(query, k)
+        if mode == "keyword":
+            return self._keyword(query, k)
+        if mode == "hybrid":
+            pool = max(k * 3, 10)  # fuse deeper candidate lists than we return
+            vector_hits, keyword_hits = self._vector(query, pool), self._keyword(query, pool)
+            if has_identifier(query) and keyword_hits:
+                return lexical_first(keyword_hits, vector_hits, k)
+            return reciprocal_rank_fusion([vector_hits, keyword_hits], k)
+        raise ValueError(f"Unknown search mode: {mode}")
+
+    def _vector(self, query: str, k: int) -> list[dict]:
         table = self.db.open_table(TABLE)
-        qvec = self.embedder.embed([query])[0]
-        hits = table.search(qvec).metric("cosine").limit(k or self.settings.top_k).to_list()
-        return [
-            {
-                "chunk_id": h["chunk_id"],
-                "doc_id": h["doc_id"],
-                "title": h["title"],
-                "text": h["text"],
-                "score": round(1.0 - float(h["_distance"]), 4),
-            }
-            for h in hits
-        ]
+        hits = table.search(self.embedder.embed([query])[0]).metric("cosine").limit(k).to_list()
+        return [_row(h, score=1.0 - float(h["_distance"]), source="vector") for h in hits]
+
+    def _keyword(self, query: str, k: int) -> list[dict]:
+        table = self.db.open_table(TABLE)
+        # Strip characters the full-text query parser treats as operators.
+        cleaned = re.sub(r"[^\w\s-]", " ", query)
+        hits = table.search(cleaned, query_type="fts").limit(k).to_list()
+        return [_row(h, score=float(h["_score"]), source="keyword") for h in hits]
+
+
+def _row(hit: dict, score: float, source: str) -> dict:
+    return {
+        "chunk_id": hit["chunk_id"],
+        "doc_id": hit["doc_id"],
+        "title": hit["title"],
+        "text": hit["text"],
+        "score": round(score, 4),
+        "sources": [source],
+    }
+
+
+# Codes such as INS-1007, TC-2, C15-01, or long numbers such as 03300: letters/digits joined by
+# hyphens with at least one digit, or 4+ digit runs.
+_IDENTIFIER = re.compile(r"\b(?=[\w-]*\d)[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+\b|\b\d{4,}\b")
+
+
+def has_identifier(query: str) -> bool:
+    return bool(_IDENTIFIER.search(query))
+
+
+def lexical_first(keyword_hits: list[dict], vector_hits: list[dict], k: int) -> list[dict]:
+    """Keyword ranking order, back-filled with vector hits not already present.
+
+    Used for identifier queries. An embedding of "INS-1007" says little about which of many
+    look-alike reports holds it, while BM25 matches it exactly. Weighted RRF cannot express
+    "keyword wins": adjacent top ranks differ by ~1/3600 (1/61 vs 1/62), so even a small vector
+    vote reorders them.
+    """
+    seen = {h["chunk_id"] for h in keyword_hits[:k]}
+    backfill = [h for h in vector_hits if h["chunk_id"] not in seen]
+    return (keyword_hits[:k] + backfill)[:k]
+
+
+def reciprocal_rank_fusion(rankings: list[list[dict]], k: int, c: int = 60) -> list[dict]:
+    """Merge ranked lists by RRF: score(d) = sum over lists of 1 / (c + rank).
+
+    RRF needs no score normalisation, which matters here because cosine similarity and BM25
+    scores live on unrelated scales.
+    """
+    fused: dict[str, dict] = {}
+    for ranking in rankings:
+        for rank, hit in enumerate(ranking, start=1):
+            entry = fused.setdefault(hit["chunk_id"], {**hit, "score": 0.0, "sources": []})
+            entry["score"] += 1.0 / (c + rank)
+            entry["sources"] = sorted(set(entry["sources"]) | set(hit["sources"]))
+    ranked = sorted(fused.values(), key=lambda h: h["score"], reverse=True)[:k]
+    for h in ranked:
+        h["score"] = round(h["score"], 5)
+    return ranked
