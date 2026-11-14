@@ -5,6 +5,10 @@ guard_input -> planner -> researcher -> writer -> critic --(not grounded)--> res
                                                      |--(RFI)--> human_review (interrupt) -> finalize -> guard_output
 """
 
+import time
+from collections.abc import Callable
+
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 
@@ -14,19 +18,36 @@ from sitebrain.llm import LLM, make_llm
 from sitebrain.store import DocStore
 
 
-def build_graph(llm: LLM | None = None, store: DocStore | None = None, settings: Settings | None = None):
+def _timed(name: str, node: Callable[[State], State]) -> Callable[[State], State]:
+    """Record each node's wall-clock time in state["timings"] for per-request tracing."""
+
+    def run(state: State) -> State:
+        start = time.perf_counter()
+        update = node(state)
+        update["timings"] = [{"node": name, "ms": round((time.perf_counter() - start) * 1000, 1)}]
+        return update
+
+    return run
+
+
+def build_graph(llm: LLM | None = None, store: DocStore | None = None, settings: Settings | None = None,
+                checkpointer: BaseCheckpointSaver | None = None):
     settings = settings or get_settings()
     agents = Agents(llm or make_llm(settings), store or DocStore(settings), settings.max_research_attempts)
 
     g = StateGraph(State)
-    g.add_node("guard_input", agents.guard_input)
-    g.add_node("planner", agents.planner)
-    g.add_node("researcher", agents.researcher)
-    g.add_node("writer", agents.writer)
-    g.add_node("critic", agents.critic)
-    g.add_node("human_review", agents.human_review)
-    g.add_node("finalize", agents.finalize)
-    g.add_node("guard_output", agents.guard_output)
+    for name, node in [
+        ("guard_input", agents.guard_input),
+        ("planner", agents.planner),
+        ("researcher", agents.researcher),
+        ("writer", agents.writer),
+        ("critic", agents.critic),
+        ("human_review", agents.human_review),
+        ("finalize", agents.finalize),
+        ("guard_output", agents.guard_output),
+    ]:
+        # human_review is not timed: its duration is the human's response time, not system latency.
+        g.add_node(name, node if name == "human_review" else _timed(name, node))
 
     g.add_edge(START, "guard_input")
     g.add_conditional_edges("guard_input", agents.after_guard, {"blocked": END, "ok": "planner"})
@@ -40,4 +61,5 @@ def build_graph(llm: LLM | None = None, store: DocStore | None = None, settings:
     g.add_edge("guard_output", END)
 
     # The checkpointer persists state between steps, which is what lets the RFI path pause for a human.
-    return g.compile(checkpointer=InMemorySaver()), agents
+    # The CLI uses memory; the API passes a SqliteSaver so a paused RFI survives a restart.
+    return g.compile(checkpointer=checkpointer or InMemorySaver()), agents

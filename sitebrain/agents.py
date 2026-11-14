@@ -30,6 +30,7 @@ class State(TypedDict, total=False):
     review: dict  # human decision for RFIs
     final: str
     trace: Annotated[list[str], operator.add]
+    timings: Annotated[list[dict], operator.add]  # [{"node": ..., "ms": ...}] per executed node
 
 
 PLANNER_SYS = (
