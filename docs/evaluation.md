@@ -30,7 +30,16 @@ Claude Opus 5.5 (`effort=medium`), `bge-small` embeddings:
 |---|---|---|---|---|---|---|---|---|---|
 | v0.1, first run | 14 | 0.91 | 0.92 | 1.00 | 1.00 | 1.00 | 1.00 | 8.5 s | 48.8K / 6.6K |
 | v0.1, after fixes | 14 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 5.2 s | 36.7K / 4.9K |
-| **v0.2, hybrid retrieval** | **20** | **1.00** | **1.00** | **1.00** | **1.00** | **1.00** | **1.00** | **4.8 s** | **56.3K / 6.9K** |
+| v0.2, hybrid retrieval | 20 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 4.8 s | 56.3K / 6.9K |
+| **v0.3, direct API, run 1** | **20** | **1.00** | **0.94** | **1.00** | **1.00** | **1.00** | **1.00** | **6.9 s** | **56.4K / 6.8K** |
+| **v0.3, direct API, run 2** | **20** | **1.00** | **1.00** | **0.94** | **1.00** | **1.00** | **1.00** | **7.1 s** | **56.4K / 7.1K** |
+
+The v0.1 and v0.2 rows went through a local proxy that compresses requests (see "Measurement notes"); the
+v0.3 rows call the Anthropic API directly and are the reference numbers. Between the two direct runs, one
+fact was scored as missing because of formatting (q03: the scorer compared "32 C" literally; it now ignores
+unit formatting, after checking the model's answer was correct), and in the other run the critic judged one
+correct, cited answer (q17) as not fully supported. LLM-judged metrics move by a case or two between runs,
+so both runs are reported rather than the better one.
 
 v0.2 adds six questions built around exact identifiers (column IDs, crane IDs, the specification section
 number, counts). A full v0.2 run makes 56 model calls and costs roughly USD 0.36 at list prices.
@@ -78,3 +87,50 @@ guardrails in CI, not generation quality.
 - **Critic blind spot (q09).** In the same failure the writer correctly said the sources did not contain
   the answer, and the critic passed it as grounded, so no second search ran. The critic now reports
   `answered` separately from `grounded`, and an unanswered question triggers a retry with a reworded query.
+
+
+## Visual retrieval (v0.3)
+
+`evals/make_visual_pages.py` draws 10 fictional pages: four near-identical structural drawings (Levels
+13-16, each with a title block, revision and one enlarged column), a bar bending schedule, three
+near-identical pour checklists (ticked boxes, slump, inspector), a site logistics plan and a progress
+chart. `evals/visual_queries.jsonl` has 12 questions whose answers exist only in those images.
+
+**Retrieval only** (`evals/compare_visual.py`, RTX 4070 Laptop 8 GB, i7-12700H):
+
+| Configuration | hit@1 | hit@3 | MRR | index time per page | query time |
+|---|---|---|---|---|---|
+| CLIP ViT-B/32, single vector (CPU) | 0.33 | 0.58 | 0.44 | 0.03 s | 35 ms |
+| **ColSmol-256M (CPU)** | **0.83** | **1.00** | **0.89** | 8.1 s | 105 ms |
+| **ColSmol-256M (GPU)** | **0.83** | **1.00** | **0.89** | 0.38 s | 113 ms |
+| ColQwen2.5-v0.2 (GPU, 4 pages per batch) | 0.75 | 1.00 | 0.88 | 16.6 s | 105 ms |
+| ColQwen2.5-v0.2 (GPU, 1 page per batch) | 0.92 | 1.00 | 0.94 | 11.3 s | 132 ms |
+
+- Late-interaction models find the right page in the top 3 every time; single-vector CLIP mostly returns
+  the site plan or the chart, because one vector cannot hold the text on a drawing.
+- **CPU users lose nothing in accuracy** with ColSmol, only indexing speed (8 s per page, once per page).
+- **ColQwen2.5 does not fit an 8 GB card well.** VRAM peaked at 7.9 of 8 GB even one page at a time;
+  the driver spills into shared memory and indexing runs 30x slower than ColSmol on the same GPU. The
+  `auto` setting therefore picks ColQwen2.5 only on GPUs with at least 12 GB.
+- Accuracy changed with batch size (0.75 vs 0.92). Batched inference can change outputs slightly; the
+  cause was not isolated, so it is reported as observed.
+- Hardest case for every model: "which checklist shows cube samples were **not** taken?" (picking out a
+  missing tick among look-alike forms).
+
+**End to end with Claude** (`evals/run_evals.py --visual`, ColSmol-256M on GPU, direct API):
+
+| routed to pages | right page retrieved | expected facts | grounded | valid citations | avg latency | cost |
+|---|---|---|---|---|---|---|
+| 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 9.8 s | $0.92 |
+
+The writer and critic receive the retrieved page images, so the answer is read from the drawing,
+schedule or form itself (for example "32 mm" from the schedule table, "QA-01" from a checklist).
+
+## Measurement notes
+
+- **Proxy.** This machine routes Anthropic traffic through a local proxy that compresses requests and
+  replays responses to identical requests. A repeated visual run finished in 0.16 s per question with
+  token counts identical to the first run, which exposed it. All v0.3 numbers bypass the proxy.
+- **Token accounting.** Through the proxy, most input tokens were reported as cache writes, and the harness
+  only counted `input_tokens`, under-reporting cost. It now counts uncached, cache-write and cache-read
+  tokens and prices them separately (`est_cost_usd`).

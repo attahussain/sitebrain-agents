@@ -7,27 +7,31 @@
 A LangGraph multi-agent system that answers questions about construction project documents
 (daily site reports, specifications, HSE policies), drafts RFIs for human approval, and defends
 itself against prompt injection and PII leakage. Served over a FastAPI service with hybrid
-(BM25 + vector) retrieval, persistent checkpoints, answer caching and per-agent tracing.
-Built with **LangGraph**, **Claude (Anthropic SDK)**, **LanceDB** and **FastAPI**.
+(BM25 + vector) retrieval, visual page retrieval (ColPali family) for drawings, schedules and forms,
+persistent checkpoints, answer caching and per-agent tracing.
+Built with **LangGraph**, **Claude (Anthropic SDK)**, **LanceDB**, **ColPali/ColQwen** and **FastAPI**.
 
 > All project documents in `data/docs/` are fictional demo data.
 
 ## Results
 
-Claude Opus 5.5, 20 evaluation cases (13 factual, 1 summary, 1 RFI, 6 exact-identifier questions,
-2 direct and 1 indirect prompt injection):
+All runs call the Anthropic API directly with Claude Opus 5.5 (`effort=medium`). LLM evaluations vary
+slightly between runs, so both direct runs of the text set are shown.
 
-| retrieval hit | answer keyword recall | grounded | valid citations | injections blocked | avg latency |
-|---|---|---|---|---|---|
-| 1.00 | 1.00 | 1.00 | 1.00 | 1.00 (3/3) | 4.8 s |
+| Eval | retrieval hit | expected facts | grounded | valid citations | injections blocked | avg latency | cost / run |
+|---|---|---|---|---|---|---|---|
+| Text, 20 cases (run 1) | 1.00 | 0.94 | 1.00 | 1.00 | 1.00 | 6.9 s | $0.36 |
+| Text, 20 cases (run 2) | 1.00 | 1.00 | 0.94 | 1.00 | 1.00 | 7.1 s | $0.37 |
+| **Visual, 12 cases** (page images only) | **1.00** (page) | **1.00** | **1.00** | **1.00** | - | 9.8 s | $0.92 |
 
-Retrieval benchmark on 60 near-identical synthetic daily reports (81 identifier questions, top-1 accuracy):
+Retrieval benchmarks (no LLM, free to run):
 
-| vector | BM25 keyword | hybrid, equal-weight RRF | **hybrid, as shipped** |
+| Benchmark | Baseline | Shipped | |
 |---|---|---|---|
-| 27% | 100% | 41% | **100%** |
+| 60 near-identical daily reports, 81 identifier questions, top-1 | vector 27%, equal-weight hybrid 41% | **100%** | lexical-first hybrid |
+| 10 drawing/schedule/form pages, 12 visual questions, top-1 / top-3 | CLIP 33% / 58% | **83% / 100%** | ColSmol-256M, CPU or GPU |
 
-How each number was reached, including the failures along the way, is in [docs/evaluation.md](docs/evaluation.md).
+Details, including the experiments that did not work, are in [docs/evaluation.md](docs/evaluation.md).
 
 ## Architecture
 
@@ -63,6 +67,14 @@ flowchart LR
   [docs/architecture.md](docs/architecture.md).
 - Documents are chunked per `##` section, each chunk prefixed with "document title - section".
 
+### Visual pages (drawings, schedules, forms, plans)
+- Page images are embedded directly by a **ColPali-family** model: many vectors per page, scored by
+  late interaction (MaxSim) in LanceDB. No OCR, so title blocks, table cells and ticked boxes stay searchable.
+- The planner decides per question whether the answer is likely visual; the researcher then adds the top
+  pages, and the writer and critic receive the **page images themselves**, cited as `page:<id>`.
+- **CPU and GPU:** the model is chosen from the hardware. ColSmol-256M on CPU or on GPUs under 12 GB;
+  ColQwen2.5 on GPUs with 12 GB or more. Measured trade-offs are in the evaluation doc.
+
 ### Guardrails
 - **Direct prompt injection**: the user's input is checked before any agent runs.
 - **Indirect prompt injection**: injected sentences are stripped from retrieved chunks; the rest of the document stays usable.
@@ -86,6 +98,21 @@ python -m sitebrain.cli ask "What fault caused the TC-1 downtime?"
 set ANTHROPIC_API_KEY=sk-ant-...
 set SITEBRAIN_PROVIDER=claude
 python -m sitebrain.cli ask "Draft an RFI about the Level 15 column concrete cover failure"
+```
+
+### Visual page search (optional)
+
+```bash
+# CPU users
+pip install -e ".[visual]"
+
+# GPU users (NVIDIA): install a CUDA build of torch first, then the extra
+pip install "torch==2.13.0" --index-url https://download.pytorch.org/whl/cu126
+pip install -e ".[visual]"
+
+set SITEBRAIN_VISUAL=1
+python -m sitebrain.cli ingest     # also indexes data/pages/*.png
+python -m sitebrain.cli ask "What bar diameter is specified for the C15-07 main bars?"
 ```
 
 ### HTTP API
@@ -126,17 +153,24 @@ persist in a named volume. CI builds the image and checks `/health` on every pus
 | `SITEBRAIN_TOP_K` | `4` | Chunks retrieved per search |
 | `SITEBRAIN_MAX_ATTEMPTS` | `2` | Max research passes before answering |
 | `SITEBRAIN_CHECKPOINT_DB` | `data/checkpoints.sqlite` | API checkpoint store |
+| `SITEBRAIN_VISUAL` | `0` | `1` enables visual page retrieval (needs the `[visual]` extra) |
+| `SITEBRAIN_VISUAL_MODEL` | `auto` | `auto` (by hardware), any colpali-engine model id, or `clip` |
+| `SITEBRAIN_VISUAL_DEVICE` | `auto` | `auto`, `cpu` or `cuda` |
+| `SITEBRAIN_VISUAL_BATCH` | `1` | Pages per forward pass when indexing |
 | `REDIS_URL` | unset | Use Redis for the answer cache |
 | `SITEBRAIN_CACHE_TTL` | `3600` | Cache TTL in seconds; `0` disables caching |
 
 ## Tests and evaluation
 
 ```bash
-pytest                                             # 28 offline tests (chunking, retrieval, guardrails,
+pytest                                             # 32 offline tests (chunking, retrieval, visual, guardrails,
                                                    #   routing, retries, HITL, API, restart persistence)
 python evals/run_evals.py                          # 20-case end-to-end eval (needs an API key)
 python evals/compare_retrieval.py                  # vector vs BM25 vs hybrid on the demo corpus (free)
 python evals/make_scale_corpus.py && python evals/compare_retrieval.py --scale   # 60-report benchmark
+python evals/compare_visual.py --only cpu          # CLIP vs ColSmol on CPU   (needs [visual])
+python evals/compare_visual.py --only gpu          # ColSmol and ColQwen2.5 on GPU
+python evals/run_evals.py --visual                 # 12 page-image questions end to end with Claude
 ```
 
 ## Documentation
@@ -147,7 +181,7 @@ python evals/make_scale_corpus.py && python evals/compare_retrieval.py --scale  
 ## Why this project
 
 At a construction contractor I built a production RAG knowledge base over technical drawings and site
-reports. This repository rebuilds that idea as an open, testable multi-agent system and adds what a
+reports. This repository rebuilds that idea, including search over the drawings themselves, as an open, testable multi-agent system and adds what a
 single retrieval pipeline lacks: a critic that checks every answer against its sources, human approval
 before anything formal leaves the system, defences against injected instructions and PII leakage, and
 retrieval that holds up when hundreds of reports look alike.
@@ -160,6 +194,7 @@ sitebrain/
   graph.py       # LangGraph wiring, per-node timing, checkpointer
   api.py         # FastAPI service
   store.py       # chunking, embeddings, BM25 + vector search, rank fusion
+  visual.py      # ColPali-family page embedding (CPU/GPU), MaxSim page search
   cache.py       # answer cache (memory / Redis)
   llm.py         # Claude provider (structured outputs, refusals) + offline mock
   guardrails.py  # injection detection/stripping, PII masking
@@ -169,5 +204,6 @@ evals/           # datasets, end-to-end harness, retrieval benchmark
 tests/           # pytest suite
 docs/            # architecture and evaluation write-ups
 data/docs/       # fictional project documents
+data/pages/      # fictional drawings, schedules, checklists, site plan, progress chart (PNG)
 Dockerfile, compose.yml, .github/   # container, local stack, CI
 ```

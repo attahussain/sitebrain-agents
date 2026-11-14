@@ -70,6 +70,18 @@ are never cached. Redis is used when configured so replicas share hits.
 **Per-node timing.** Each node is wrapped to record its wall-clock time; the API returns the list with
 every answer. The human-review node is excluded because its duration is a person's response time.
 
+**Visual pages as images, not OCR text.** Drawings, schedules and forms lose most of their meaning when
+flattened to text. ColPali-family models embed each page image as one vector per patch and score a query
+by late interaction (MaxSim), which LanceDB supports natively for multi-vector columns. The planner decides
+per question whether pages are needed (a schema field, so the decision is explicit and testable), and the
+writer and critic receive the page images themselves, so the critic can verify a claim against the drawing.
+
+**Model chosen from the hardware.** The same feature has to work on a laptop CPU and on a GPU. ColSmol-256M
+matched the larger model's top-3 accuracy on CPU, at 8 s per page to index. ColQwen2.5 was the most
+accurate but nearly filled an 8 GB card with its weights alone, which made indexing 30x slower than
+ColSmol on the same GPU. `auto` uses ColQwen2.5 only with at least 12 GB of VRAM. Any model can be forced
+with `SITEBRAIN_VISUAL_MODEL`.
+
 **Local embeddings.** `BAAI/bge-small-en-v1.5` via fastembed runs on CPU, costs nothing per query and keeps
 document text inside the machine during indexing. LanceDB stores vectors and metadata in one embedded
 table, with no server to run.
@@ -85,6 +97,11 @@ the Claude evaluation run is for.
   fall back to plain fusion.
 - The scale benchmark is synthetic. It reproduces the template repetition of real daily reports but not
   their messiness (typos, scanned PDFs, tables).
+- Prompt-injection stripping works on text. Instructions rendered inside a page image cannot be removed by
+  pattern matching; the writer prompt tells the model to treat all source content as data, which is a
+  weaker defence.
+- Visual answers cite whole pages, not regions of a page.
+- Visual search runs only when the planner asks for it, so a misrouted question can miss a relevant page.
 - Chunking is section-based. Long tables and drawings (the original use case) need layout-aware parsing.
 - The evaluation set is 14 cases over 6 short documents: enough to catch regressions, not to claim accuracy.
 - The critic is the same model family as the writer, so it can share the writer's blind spots.
